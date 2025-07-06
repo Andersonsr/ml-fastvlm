@@ -132,9 +132,9 @@ class LlavaQwen2ForCausalLM(Qwen2ForCausalLM, LlavaMetaForCausalLM):
                 images,
                 image_sizes=image_sizes
             )
+
         else:
             inputs_embeds = self.get_model().embed_tokens(inputs)
-
         return super().generate(
             position_ids=position_ids,
             attention_mask=attention_mask,

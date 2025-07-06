@@ -15,7 +15,7 @@
 #    limitations under the License.
 
 from packaging import version
-import os
+import os, sys
 import copy
 from dataclasses import dataclass, field
 import json
@@ -27,7 +27,8 @@ import torch
 
 import transformers
 import tokenizers
-
+path = os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..', '..'))
+sys.path.append(path)
 from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from torch.utils.data import Dataset
 from llava.train.llava_trainer import LLaVATrainer
@@ -1221,6 +1222,7 @@ def train(attn_implementation=None):
                            args=training_args,
                            **data_module)
 
+    model = model.to('cuda:0')
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
     else:
@@ -1228,6 +1230,7 @@ def train(attn_implementation=None):
     trainer.save_state()
 
     model.config.use_cache = True
+
 
     if training_args.lora_enable:
         state_dict = get_peft_state_maybe_zero_3(
@@ -1246,4 +1249,4 @@ def train(attn_implementation=None):
 
 
 if __name__ == "__main__":
-    train()
+    train(attn_implementation=None)

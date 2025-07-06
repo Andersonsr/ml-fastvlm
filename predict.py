@@ -28,7 +28,7 @@ def predict(args):
     # Load model
     disable_torch_init()
     model_name = get_model_name_from_path(model_path)
-    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name, device="mps")
+    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name, device="cuda:0")
 
     # Construct prompt
     qs = args.prompt
@@ -45,7 +45,7 @@ def predict(args):
     model.generation_config.pad_token_id = tokenizer.pad_token_id
 
     # Tokenize prompt
-    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(torch.device("mps"))
+    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(torch.device("cuda:0"))
 
     # Load and preprocess image
     image = Image.open(args.image_file).convert('RGB')
@@ -65,7 +65,7 @@ def predict(args):
             use_cache=True)
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-        print(outputs)
+        # print(outputs)
 
     # Restore generation config
     if generation_config is not None:

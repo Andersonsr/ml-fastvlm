@@ -405,7 +405,7 @@ Answer the questions.""",
 
 
 conv_qwen_2 = Conversation(
-    system="<|im_start|>system\nYou are a helpful assistant.",
+    system="<|im_start|>system\nYou are a medical AI assistant specialized in interpreting chest radiographs.",
     roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
     version="qwen_v2",
     messages=(),
