@@ -29,7 +29,7 @@ import transformers
 import tokenizers
 path = os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..', '..'))
 sys.path.append(path)
-from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from llava.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from torch.utils.data import Dataset
 from llava.train.llava_trainer import LLaVATrainer
 from llava import conversation as conversation_lib
@@ -846,9 +846,10 @@ def preprocess(
     # conversation_lib.default_conversation.version == "qwen_v2"
 
     if conversation_lib.default_conversation.sep_style == conversation_lib.SeparatorStyle.PLAIN:
-        # print('plain')
+        # print('--plain--')
         return preprocess_plain(sources, tokenizer)
     if conversation_lib.default_conversation.sep_style == conversation_lib.SeparatorStyle.LLAMA_2:
+        # print('--llama_2--')
         return preprocess_llama_2(sources, tokenizer, has_image=has_image)
     if conversation_lib.default_conversation.version.startswith("v1"):
         # print('--v1--')
@@ -1224,7 +1225,7 @@ def train(attn_implementation=None):
 
     model = model.to('cuda:0')
     sys.path.append(os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..', '..', '..')))
-    from util import learnable_parameters, model_size
+    from util import learnable_parameters
     # print(model_size(model))
     print(learnable_parameters(model))
 
