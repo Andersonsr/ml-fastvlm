@@ -32,7 +32,6 @@ sys.path.append(path)
 from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from torch.utils.data import Dataset
 from llava.train.llava_trainer import LLaVATrainer
-
 from llava import conversation as conversation_lib
 from llava.model import *
 from llava.mm_utils import tokenizer_image_token, process_anyres_image
@@ -1223,6 +1222,11 @@ def train(attn_implementation=None):
                            **data_module)
 
     model = model.to('cuda:0')
+    sys.path.append(os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..', '..', '..')))
+    from util import learnable_parameters, model_size
+    print(model_size(model))
+    print(learnable_parameters(model))
+
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
     else:
@@ -1230,7 +1234,6 @@ def train(attn_implementation=None):
     trainer.save_state()
 
     model.config.use_cache = True
-
 
     if training_args.lora_enable:
         state_dict = get_peft_state_maybe_zero_3(
