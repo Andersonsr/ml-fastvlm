@@ -1224,6 +1224,7 @@ def train(attn_implementation=None):
                            **data_module)
 
     model = model.to('cuda:0')
+    print(model)
     sys.path.append(os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..', '..', '..')))
     from util import learnable_parameters
     # print(model_size(model))

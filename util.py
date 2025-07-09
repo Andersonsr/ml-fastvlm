@@ -1,6 +1,12 @@
+import mmap
+import torch
+import json
+import os
+import matplotlib.pyplot as plt
+from huggingface_hub import hf_hub_download
+
 
 def model_size(model):
-    import torch
     size_model = 0
     for param in model.parameters():
         if param.is_floating_point():
@@ -22,7 +28,6 @@ def learnable_parameters(model):
 
 
 def plot_curves(training, validation, output_name):
-    import matplotlib.pyplot as plt
     plt.plot(training, label=f'training loss')
     plt.text(len(training), training[-1], f'{training[-1]:.3}')
 
@@ -35,3 +40,29 @@ def plot_curves(training, validation, output_name):
     plt.savefig(output_name)
     plt.clf()
 
+
+# star of code from  https://gist.github.com/Narsil/3edeec2669a5e94e4707aa0f901d2282
+def load_safetensors_file(filename):
+    with open(filename, mode="r", encoding="utf8") as file_obj:
+        with mmap.mmap(file_obj.fileno(), length=0, access=mmap.ACCESS_READ) as m:
+            header = m.read(8)
+            n = int.from_bytes(header, "little")
+            metadata_bytes = m.read(n)
+            metadata = json.loads(metadata_bytes)
+
+    size = os.stat(filename).st_size
+    storage = torch.ByteStorage.from_file(filename, shared=False, size=size).untyped()
+    offset = n + 8
+    return {name: create_tensor(storage, info, offset) for name, info in metadata.items() if name != "__metadata__"}
+
+
+DTYPES = {"F32": torch.float32, "I64": torch.int64, "BF16": torch.float16, }
+
+
+def create_tensor(storage, info, offset):
+    dtype = DTYPES[info["dtype"]]
+    shape = info["shape"]
+    start, stop = info["data_offsets"]
+    return torch.asarray(storage[start + offset : stop + offset], dtype=torch.uint8).view(dtype=dtype).reshape(shape)
+
+# end of code from  https://gist.github.com/Narsil/3edeec2669a5e94e4707aa0f901d2282

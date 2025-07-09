@@ -14,7 +14,7 @@ from PIL import Image
 from model.classifiers import mimic_classifier_list
 # pil to tensor
 to_tensor = transforms.ToTensor()
-
+import torch
 
 def fix_mimic_chunk_labels(filename):
     '''
@@ -140,11 +140,9 @@ def check_mimic_max_resolution():
 
 
 if __name__ == '__main__':
-    files = open('E:\\datasets\\mimic\\to_download', 'r')
-    import subprocess
-    for line in files:
-        path = os.path.join('E:\\datasets\\mimic\\preprocess\\resize_1024', os.path.basename(line))
-        if os.path.exists(path):
-            subprocess.run(['cp', path, path.replace('resize_1024', 'new')])
-        else:
-            print('File does not exist {}'.format(path))
+    from util import load_safetensors_file
+    weights = load_safetensors_file('checkpoint/mimic-finetune/model.safetensors')
+    for key in weights.keys():
+        if 'projector' in key:
+            print(key)
+

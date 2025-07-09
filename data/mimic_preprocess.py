@@ -26,8 +26,8 @@ def preprocess(img, crop, size):
 
 
 if __name__ == '__main__':
-    filename = 'E:\\datasets\\mimic\\chat_train_MIMIC_CXR_all_gpt4extract_rulebased_v1.json'
-    output_dir = 'E:\\datasets\\mimic\\preprocess\\resize_1024'
+    filename = 'E:\\datasets\\mimic\\chat_test_MIMIC_CXR_all_gpt4extract_rulebased_v1.json'
+    output_dir = 'E:\\datasets\\mimic\\preprocess\\resize_1024_test'
     root = 'E:\\datasets\\mimic\\mimic-cxr-jpg\\2.1.0\\files\\'
     size = 1024
     crop = False
@@ -64,7 +64,7 @@ if __name__ == '__main__':
                              'study': study})
             else:
                 print('missing file {}'.format(path))
-    with open(os.path.join(os.path.dirname(output_dir), 'training_split.json'), 'w') as outfile:
+    with open(os.path.join(os.path.dirname(output_dir), 'test_split.json'), 'w') as outfile:
         json.dump(data, outfile, indent=2)
 
 

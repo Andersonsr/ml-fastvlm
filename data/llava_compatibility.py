@@ -2,7 +2,7 @@ import json
 from tqdm import tqdm
 
 if __name__ == '__main__':
-    filename = "E:\\datasets\\mimic\\preprocess\\training_split.json"
+    filename = "E:\\datasets\\mimic\\preprocess\\test_split.json"
     data = json.load(open(filename, 'r'))
     new_data = []
     for sample in tqdm(data):
@@ -12,5 +12,5 @@ if __name__ == '__main__':
         new_sample['conversations'].append({'from': 'gpt', 'value': sample['findings']})
         new_data.append(new_sample)
 
-    json.dump(new_data, open('E:\\datasets\\mimic\\preprocess\\training_split_llava.json', 'w'), indent=2)
+    json.dump(new_data, open('E:\\datasets\\mimic\\preprocess\\test_split_llava.json', 'w'), indent=2)
 

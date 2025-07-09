@@ -1,10 +1,11 @@
 #!/bin/bash
 
-python src\\ml-fastvlm\\llava\\train\\train_qwen.py \
-    --model_name_or_path C:\\Users\\Usuario\\PycharmProjects\\RX\\src\\checkpoint\\llava-fastvithd_0.5b_stage3 \
-    --vision_tower  C:\\Users\\Usuario\\PycharmProjects\\RX\\src\\checkpoint\\llava-fastvithd_0.5b_stage3\
+python llava\\train\\train_qwen.py \
+    --model_name_or_path C:\\Users\\Usuario\\PycharmProjects\\RX\\src\\ml-fastvlm\\checkpoint\\llava-fastvithd_0.5b_stage3 \
+    --vision_tower  C:\\Users\\Usuario\\PycharmProjects\\RX\\src\\ml-fastvlm\\checkpoint\\llava-fastvithd_0.5b_stage3\
+    --mm_vision_tower "mobileclip_l_1024"\
     --version v1 \
-    --data_path D:\\mimic\\preprocess\\training_split_llava.json \
+    --data_path E:\\datasets\\mimic\\preprocess\\training_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
     --mm_use_im_start_end True \
     --mm_use_im_patch_token False \
@@ -17,6 +18,7 @@ python src\\ml-fastvlm\\llava\\train\\train_qwen.py \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
+    --mm_projector_type: "mlp2x_gelu" \
     --save_strategy "steps" \
     --save_steps 50000 \
     --save_total_limit 1 \
