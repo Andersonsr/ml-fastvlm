@@ -15,6 +15,38 @@ from llava.mm_utils import tokenizer_image_token, process_images, get_model_name
 from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
+def caption(model, tokenizer, image_processor, args, image_path):
+    conv = conv_templates[args.conv_mode].copy()
+    conv.append_message(conv.roles[0], args.prompt)
+    conv.append_message(conv.roles[1], '')
+    prompt = conv.get_prompt()
+
+    # Tokenize prompt
+    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(
+        torch.device("cuda:0"))
+
+    # Load and preprocess image
+    image = Image.open(image_path).convert('RGB')
+    image_tensor = process_images([image], image_processor, model.config)[0]
+    # print(image_tensor.shape)
+    # print(prompt)
+
+    # Run inference
+    with torch.inference_mode():
+        output_ids = model.generate(
+            input_ids,
+            images=image_tensor.unsqueeze(0).half(),
+            image_sizes=[image.size],
+            do_sample=True if args.temperature > 0 else False,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            num_beams=args.num_beams,
+            max_new_tokens=256,
+            use_cache=True)
+
+        return tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+
+
 def predict(args):
     # Remove generation config from model folder
     # to read generation parameters from args
@@ -33,47 +65,27 @@ def predict(args):
                                                      get_model_name_from_path('checkpoint/llava-fastvithd_0.5b_stage3'),
                                                      device="cuda:0")
 
-    data = json.load(open(args.json_file, 'r'))
-    output = {'generated': []}
+    result = {'generated': []}
+    root, extension = os.path.splitext(args.file)
 
-    for sample in tqdm(data[:20]):
-        conv = conv_templates[args.conv_mode].copy()
-        conv.append_message(conv.roles[0], args.prompt)
-        conv.append_message(conv.roles[1], '')
-        prompt = conv.get_prompt()
+    # Set the pad token id for generation
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
 
-        # Set the pad token id for generation
-        model.generation_config.pad_token_id = tokenizer.pad_token_id
+    if extension.lower() == '.json':
+        data = json.load(open(args.file, 'r'))
+        for sample in tqdm(data[:20]):
+            path = os.path.join(args.image_root, sample['image_name'])
+            output = caption(model, tokenizer, image_processor, args, path)
+            result['generated'].append({'id': sample['id'], 'prediction': output, 'reference': sample['findings']})
 
-        # Tokenize prompt
-        input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(torch.device("cuda:0"))
+        json.dump(result, open(os.path.join(model_path, 'mimic-predictions.json'), 'w'), indent=2)
 
-        # Load and preprocess image
-        image = Image.open(os.path.join(args.image_root, sample['image_name'])).convert('RGB')
-        image_tensor = process_images([image], image_processor, model.config)[0]
-        # print(image_tensor.shape)
-        # print(prompt)
-
-        # Run inference
-        with torch.inference_mode():
-            output_ids = model.generate(
-                input_ids,
-                images=image_tensor.unsqueeze(0).half(),
-                image_sizes=[image.size],
-                do_sample=args.do_sample,
-                temperature=args.temperature,
-                top_p=args.top_p,
-                num_beams=args.num_beams,
-                max_new_tokens=256,
-                use_cache=True)
-
-            outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-            output['generated'].append({'id': sample['id'], 'prediction': outputs, 'reference': sample['findings']})
+    elif extension.lower() == '.jpg':
+        print(caption(model, tokenizer, image_processor, args, args.file))
 
     # Restore generation config
     if generation_config is not None:
         os.rename(generation_config, os.path.join(model_path, 'generation_config.json'))
-    json.dump(output, open(os.path.join(model_path, 'mimic-predictions.json'), 'w'), indent=2)
 
 
 if __name__ == "__main__":
@@ -81,13 +93,12 @@ if __name__ == "__main__":
     parser.add_argument("--model-path", type=str, default="./llava-v1.5-13b")
     parser.add_argument("--model-base", type=str, default=None)
     parser.add_argument("--image-root", type=str, default=None, help="location of image file")
-    parser.add_argument("--json-file", type=str, default=None, help="location of json annotation")
+    parser.add_argument("--file", type=str, default=None, help="location of json annotation or image file")
     parser.add_argument("--conv-mode", type=str, default="qwen_2")
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--top_p", type=float, default=None)
     parser.add_argument("--num_beams", type=int, default=1)
     parser.add_argument("--prompt", type=str, default="\ndescribe the findings in <image>")
-    parser.add_argument("--do_sample", action="store_true", default=False)
     args = parser.parse_args()
 
     predict(args)
