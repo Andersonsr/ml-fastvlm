@@ -1,16 +1,17 @@
 from torch import nn
+# removed 'No Finding'
 mimic_classifier_list = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Enlarged Cardiomediastinum',
-                         'Fracture', 'Lung Lesion', 'Lung Opacity', 'No Finding', 'Pleural Effusion', 'Pleural Other',
+                         'Fracture', 'Lung Lesion', 'Lung Opacity', 'Pleural Effusion', 'Pleural Other',
                          'Pneumonia', 'Pneumothorax', 'Support Devices']
 
 
 class LinearClassifier(nn.Module):
     def __init__(self, input_size, output_classes):
         super(LinearClassifier, self).__init__()
-        self.fc1 = nn.Linear(input_size, output_classes)
+        self.mlp = nn.Sequential(nn.Linear(input_size, output_classes))
 
     def forward(self, x):
-        return self.fc1(x)
+        return self.mlp(x)
 
 
 class MultiClassifier(nn.Module):

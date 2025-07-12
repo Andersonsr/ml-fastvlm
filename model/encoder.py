@@ -1,100 +1,51 @@
-import json
+import os
+import sys
+from PIL import Image
 import torch
-from open_clip import create_model_from_pretrained
-from transformers import AutoImageProcessor, AutoModel
-import torch.nn as nn
-import timm
-import open_clip
+
+path = os.path.normpath(os.path.join(os.path.join(os.path.abspath(__file__)), '..', '..', 'ml-fastvlm'))
+sys.path.append(path)
+# print(path)
+from llava.model.builder import load_pretrained_model
+from llava.conversation import conv_templates
+from llava.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path
+from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from llava.conversation import Conversation, SeparatorStyle
+from torch import nn
 
 
-def model_from_config(config):
-    if config['package'] == 'timm':
-        model = timm.create_model(config['model_name'], pretrained=True, num_classes=0)
-
-    elif config['package'] == 'openclip':
-        model, _ = create_model_from_pretrained(config['model_name'])
-        model = model.visual
-
-    elif config['package'] == 'transformers':
-        model = AutoModel.from_pretrained(config['model_name'])
-
-    else:
-        raise ValueError(f'Unknown package: {config["package"]}')
-
-    if 'lora' in config and config['lora']:
-        # TODO: apply LoRA
-        raise NotImplementedError
-
-    return model
+def get_encoder(model_path, model_name):
+    _, model, image_processor, _ = load_pretrained_model(model_path, None, model_name, device="cuda:0")
+    return model.model.vision_tower, image_processor
 
 
-def create_model(config):
-    # fine-tuned local model
-    if 'encoder_config' in config.keys():
-        model = model_from_config(config['encoder_config'])
-        checkpoint = torch.load(config['checkpoint_path'])
-        model.load_state_dict(checkpoint['model_state_dict'])
+def find_all_linear_names(model):
+    cls = torch.nn.Linear
+    lora_module_names = set()
+    for name, module in model.named_modules():
+        if isinstance(module, cls):
+            names = name.split('.')
+            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
 
-    else:
-        model = model_from_config(config)
-
-    return model
-
-
-class Encoder(nn.Module):
-    def __init__(self, config):
-        super(Encoder, self).__init__()
-        self.vision = create_model(config)
-        if 'encoder_config' in config.keys():
-            config = config['encoder_config']
-
-        self.input_size = config['input_size']
-        self.output_dim = config['hidden_size']
-        self.package = config['package']
-        self.lora = config['lora'] if 'lora' in config.keys() else False
-
-    def forward(self, x):
-        if self.package == 'timm' or self.package == 'openclip':
-            return self.vision(x)
-
-        elif self.package == 'transformers':
-            return self.vision(x)['pooler_output']
-
-    def grid_features(self, x):
-        if self.package == 'timm':
-            return self.vision.forward_features(x)
-
-        if self.package == 'openclip':
-            features = {}
-            def hook(module, input, output):
-                features['output'] = output
-
-            self.vision.trunk.blocks[-1].register_forward_hook(hook)
-            self.vision(x)
-            return features['output']
-
-        elif self.package == 'transformers':
-            return self.vision(x)['last_hidden_state']
+    return list(lora_module_names)
 
 
 if __name__ == '__main__':
-    siglip_512 = {'input_size': 512,
-              'hidden_size': 768,
-              'model_name': 'vit_base_patch16_siglip_512',
-              'package': 'timm'}
+    model_path = '../checkpoints/llava-fastvithd_0.5b_stage3'
+    model_name = get_model_name_from_path(model_path)
+    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
+                                                                           device="cuda:0")
+    image = Image.open("E:\\datasets\\mimic\\preprocess\\resize_1024\\0000c2f5-f02f9f3c-1ed14642-958de0ad-d6ce4d20.jpg").convert('RGB')
+    image_tensor = process_images([image], image_processor, model.config)[0].unsqueeze(0)
+    print('image shape', image_tensor.shape)
+    output = model.get_vision_tower()(image_tensor)
+    print('embeddings shape', output.shape)
+    projector = model.model.mm_projector.to(dtype=torch.float32)
+    projected = projector(output)
+    print('projected shape', projected.shape)
 
-    siglip2_256 = {'input_size': 256,
-                   'hidden_size': 768,
-                   'model_name': 'hf-hub:timm/ViT-B-16-SigLIP2-256',
-                   'package': 'openclip'}
-
-    dinov2 = {'input_size': 224,
-              'hidden_size': 768,
-              'model_name': 'facebook/dinov2-with-registers-base',
-              'package': 'transformers'}
-
-    cfg = json.load(open('D:\\modelos_v2\\encoder\\class3_siglip256\\experiment.json'))
-    vision = Encoder(cfg)
-    x = torch.randn(1, 3, 256, 256)
-    print(vision(x).shape)
-
+    # for name, module in model.named_modules():
+    #     print(name)
+    print(model.get_vision_tower().vision_tower.model.network)
+    # print(model.get_vision_tower().vision_tower.model.network[7])
+    # encoder = lora(model.get_vision_tower(), 16, 32, 0.5)

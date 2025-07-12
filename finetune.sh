@@ -1,9 +1,8 @@
 #!/bin/bash
 
 python llava\\train\\train_qwen.py \
-    --model_name_or_path C:\\Users\\Usuario\\PycharmProjects\\RX\\src\\ml-fastvlm\\checkpoint\\llava-fastvithd_0.5b_stage3 \
-    --vision_tower  C:\\Users\\Usuario\\PycharmProjects\\RX\\src\\ml-fastvlm\\checkpoint\\llava-fastvithd_0.5b_stage3\
-    --mm_vision_tower "mobileclip_l_1024"\
+    --model_name_or_path checkpoints/mimic-finetune \
+    --vision_tower checkpoints/mimic-finetune \
     --version v1 \
     --data_path E:\\datasets\\mimic\\preprocess\\training_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
@@ -12,13 +11,12 @@ python llava\\train\\train_qwen.py \
     --image_aspect_ratio pad \
     --group_by_modality_length True \
     --bf16 True \
-    --output_dir D:\modelos_v2\decoder-tune \
+    --output_dir D:\\modelos_v2\\decoder-tune \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
-    --mm_projector_type: "mlp2x_gelu" \
     --save_strategy "steps" \
     --save_steps 50000 \
     --save_total_limit 1 \

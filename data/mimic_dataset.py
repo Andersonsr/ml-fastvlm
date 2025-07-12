@@ -14,8 +14,8 @@ to_tensor = ToTensor()
 
 class MimicDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, json_file):
-        assert os.path.exists(json_file)
-        assert os.path.isdir(root_dir)
+        assert os.path.exists(json_file), '{} does not exist'.format(json_file)
+        assert os.path.isdir(root_dir), '{} is not a dir'.format(root_dir)
 
         self.root = root_dir
         self.data = json.load(open(json_file, 'r'))
@@ -44,6 +44,16 @@ class MimicDataset(torch.utils.data.Dataset):
                 data[key].append(item)
 
         data['image'] = torch.stack(data['image'], dim=0)
+        # reorganize labels
+        reorganized_labels = {}
+        for key in data['labels'][0].keys():
+            reorganized_labels[key] = []
+
+        for labels in data['labels']:
+            for key in reorganized_labels.keys():
+                reorganized_labels[key].append(labels[key])
+
+        data['labels'] = reorganized_labels
         return data
 
     def get_loader(self, batch_size):
@@ -170,4 +180,3 @@ if __name__ == '__main__':
     from tqdm import tqdm
     for batch in tqdm(loader):
         pass
-    

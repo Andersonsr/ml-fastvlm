@@ -1,9 +1,12 @@
 import mmap
+
+import numpy as np
 import torch
 import json
 import os
 import matplotlib.pyplot as plt
 from huggingface_hub import hf_hub_download
+from sklearn.utils.class_weight import compute_class_weight
 
 
 def model_size(model):
@@ -32,8 +35,10 @@ def plot_curves(training, validation, output_name):
     plt.text(len(training), training[-1], f'{training[-1]:.3}')
 
     if len(validation) > 0:
-        plt.plot(validation, label=f'validation loss')
-        plt.text(len(validation), validation[-1], f'{validation[-1]:.3}')
+        val_interval = len(training)//len(validation)
+        x = [i for i in range(val_interval-1, len(training), val_interval)]
+        plt.plot(x, validation, label=f'validation loss')
+        plt.text(x[-1], validation[-1], f'{validation[-1]:.3}')
 
     plt.title(f'training loss')
     plt.legend()
@@ -41,7 +46,7 @@ def plot_curves(training, validation, output_name):
     plt.clf()
 
 
-# star of code from  https://gist.github.com/Narsil/3edeec2669a5e94e4707aa0f901d2282
+# start of code from https://gist.github.com/Narsil/3edeec2669a5e94e4707aa0f901d2282
 def load_safetensors_file(filename):
     with open(filename, mode="r", encoding="utf8") as file_obj:
         with mmap.mmap(file_obj.fileno(), length=0, access=mmap.ACCESS_READ) as m:
@@ -66,3 +71,33 @@ def create_tensor(storage, info, offset):
     return torch.asarray(storage[start + offset : stop + offset], dtype=torch.uint8).view(dtype=dtype).reshape(shape)
 
 # end of code from  https://gist.github.com/Narsil/3edeec2669a5e94e4707aa0f901d2282
+
+
+def balance_weights(json_file, class_list, number_of_classes):
+    counts = {}
+    for class_name in class_list:
+        counts[class_name] = []
+
+    for dado in json.load(open(json_file, 'r')):
+        for label in class_list:
+            if label in dado['labels'].keys():
+                if dado['labels'][label] < number_of_classes:
+                    counts[label].append(dado['labels'][label])
+
+    weights = {}
+    for class_name in class_list:
+        occurrences = np.array(counts[class_name])
+        weight = compute_class_weight('balanced', classes=np.unique(occurrences), y=counts[class_name])
+        weights[class_name] = torch.tensor(weight)
+    # print(weights)
+    return weights
+
+
+if __name__ == "__main__":
+    # from model.classifiers import mimic_classifier_list
+    # path = 'E:\\datasets\\mimic\\preprocess\\train_split.json'
+    # balance_weights(path, mimic_classifier_list, 4)
+
+    x = [0. for i in range(100)]
+    y = [1. for i in range(2)]
+    plot_curves(x, y, 'teste.png')

@@ -139,4 +139,5 @@ dmypy.json
 
 # FastVLM models
 app/FastVLM/model
-checkpoint/
+checkpoints/
+wandb/

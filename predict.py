@@ -61,8 +61,9 @@ def predict(args):
     disable_torch_init()
     model_name = get_model_name_from_path(model_path)
     tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name, device="cuda:0")
-    _, _, image_processor, _ = load_pretrained_model('checkpoint/llava-fastvithd_0.5b_stage3', args.model_base,
-                                                     get_model_name_from_path('checkpoint/llava-fastvithd_0.5b_stage3'),
+    _, _, image_processor, _ = load_pretrained_model('checkpoints/llava-fastvithd_0.5b_stage3', args.model_base,
+                                                     get_model_name_from_path(
+                                                         'checkpoints/llava-fastvithd_0.5b_stage3'),
                                                      device="cuda:0")
 
     result = {'generated': []}
@@ -73,7 +74,7 @@ def predict(args):
 
     if extension.lower() == '.json':
         data = json.load(open(args.file, 'r'))
-        for sample in tqdm(data[:20]):
+        for sample in tqdm(data):
             path = os.path.join(args.image_root, sample['image_name'])
             output = caption(model, tokenizer, image_processor, args, path)
             result['generated'].append({'id': sample['id'], 'prediction': output, 'reference': sample['findings']})
@@ -102,3 +103,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     predict(args)
+

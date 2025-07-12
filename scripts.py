@@ -140,9 +140,12 @@ def check_mimic_max_resolution():
 
 
 if __name__ == '__main__':
-    from util import load_safetensors_file
-    weights = load_safetensors_file('checkpoint/mimic-finetune/model.safetensors')
-    for key in weights.keys():
-        if 'projector' in key:
-            print(key)
+    data = json.load(open('E:\\datasets\\mimic\\preprocess\\train_split.json', 'r'))
+    new_data = []
+    for sample in data:
+        if 'No Finding' in sample['labels'].keys() and sample['labels']['No Finding'] != 1:
+            new_data.append(sample)
+
+    print(len(data), len(new_data))
+    json.dump(new_data, open('E:\\datasets\\mimic\\preprocess\\train_split_filter.json', 'w'), indent=2)
 
