@@ -15,7 +15,7 @@ from util import learnable_parameters, model_size, plot_curves, balance_weights
 from model.classifiers import MultiClassifier, mimic_classifier_list
 from data.mimic_dataset import MimicDataset
 from llava.mm_utils import get_model_name_from_path, process_images
-from encoder import get_encoder, lora
+from encoder import get_encoder, lora, unfreeze_stages
 
 
 if __name__ == '__main__':
@@ -37,6 +37,8 @@ if __name__ == '__main__':
     parser.add_argument('--lora_rank', type=int, default=16, help='rank of lora')
     parser.add_argument('--lora_alpha', type=int, default=32, help='alpha of lora')
     parser.add_argument('--lora_dropout', type=float, default=0.5, help='dropout of lora')
+    parser.add_argument('--dim', type=int, default=3072*256, help='dimension of encoder output')
+    parser.add_argument('--unfreeze', action='store_true', default=False, help='unfreeze')
 
     args = parser.parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -68,10 +70,13 @@ if __name__ == '__main__':
     multi_classifier.to(device)
 
     name = get_model_name_from_path(args.encoder_path)
-    encoder, preprocess = get_encoder(args.encoder_path)
+    encoder, preprocess = get_encoder(args.encoder_path, args.dim)
     encoder.to(device, dtype=torch.float)
     if args.lora:
         encoder = lora(encoder, args.lora_rank, args.lora_alpha, args.lora_dropout)
+
+    if args.unfreeze:
+        unfreeze_stages(encoder)
 
     logging.info('backbone size: {}'.format(model_size(encoder)))
     logging.info('backbone learnable params: {}'.format(learnable_parameters(encoder)))
@@ -79,7 +84,6 @@ if __name__ == '__main__':
     logging.info('adapter learnable params: {}'.format(learnable_parameters(multi_classifier)))
 
     optim = Adam(list(encoder.parameters()) + list(multi_classifier.parameters()), lr=args.lr)
-
 
     # for logging purposes
     training_loss = []
