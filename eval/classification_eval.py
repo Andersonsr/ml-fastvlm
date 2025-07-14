@@ -29,10 +29,12 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "")
     data = MimicDataset(args.root_dir, args.annotation_file)
     loader = data.get_loader(args.batch_size)
-    # add
-    classifier = MultiClassifier(mimic_classifier_list, 256*3072, 4).to(device)
+    config = json.load(open(os.path.join(args.model_path, 'experiment.json'), 'r'))
+
+    classifier = MultiClassifier(mimic_classifier_list, 256*3072, config['output_classes']).to(device)
     encoder, preprocess = get_encoder(args.model_base_path)
-    # encoder = lora(encoder, 16, 32, 0.5)
+    if config['lora']:
+        encoder = lora(encoder, config['lora_rank'], config['lora_alpha'], config['lora_dropout'])
 
     encoder.load_state_dict(torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'),
                                                         map_location=device)['model_state_dict'])
