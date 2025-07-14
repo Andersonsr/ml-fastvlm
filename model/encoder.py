@@ -12,22 +12,26 @@ from llava.mm_utils import tokenizer_image_token, process_images, get_model_name
 from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from llava.conversation import Conversation, SeparatorStyle
 from torch import nn
+from peft import LoraConfig, get_peft_model
+from util import learnable_parameters
 
 
-def get_encoder(model_path, model_name):
-    _, model, image_processor, _ = load_pretrained_model(model_path, None, model_name, device="cuda:0")
+def get_encoder(model_path):
+    model_name = get_model_name_from_path(model_path)
+    _, model, image_processor, _ = load_pretrained_model(model_path, None, model_name, device="cuda:0", )
     return model.model.vision_tower, image_processor
 
 
-def find_all_linear_names(model):
-    cls = torch.nn.Linear
-    lora_module_names = set()
-    for name, module in model.named_modules():
-        if isinstance(module, cls):
-            names = name.split('.')
-            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
-    return list(lora_module_names)
+def lora(model, r, alpha, dropout):
+    lora_config = LoraConfig(
+        r=r,
+        lora_alpha=alpha,
+        target_modules=['qkv'],
+        lora_dropout=dropout,
+        bias='lora_only',
+        task_type="IMAGE_CLASSIFICATION",
+    )
+    return get_peft_model(model, lora_config)
 
 
 if __name__ == '__main__':
@@ -46,6 +50,11 @@ if __name__ == '__main__':
 
     # for name, module in model.named_modules():
     #     print(name)
-    print(model.get_vision_tower().vision_tower.model.network)
-    # print(model.get_vision_tower().vision_tower.model.network[7])
-    # encoder = lora(model.get_vision_tower(), 16, 32, 0.5)
+    # print(model.get_vision_tower().vision_tower.model.network)
+    # print(model.get_vision_tower().vision_tower.model.network[10])
+    encoder = lora(model.get_vision_tower(), 16, 32, 0.5)
+    output = encoder(image_tensor)
+    print(learnable_parameters(encoder))
+    # print(encoder)
+
+

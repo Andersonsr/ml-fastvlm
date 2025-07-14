@@ -17,13 +17,13 @@ class LinearClassifier(nn.Module):
 class MultiClassifier(nn.Module):
     def __init__(self, classifiers_list, input_size, output_classes):
         super(MultiClassifier, self).__init__()
-        self.classifiers_list = classifiers_list
-        for classifier in classifiers_list:
-            self.add_module(classifier, LinearClassifier(input_size, output_classes))
+        for name in classifiers_list:
+            self.add_module(name, LinearClassifier(input_size, output_classes))
 
     def forward(self, x):
         y = {}
         for name, module in self.named_children():
+            # print(type(module))
             y[name] = module(x)
         return y
 

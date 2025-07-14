@@ -15,14 +15,12 @@ from util import learnable_parameters, model_size, plot_curves, balance_weights
 from model.classifiers import MultiClassifier, mimic_classifier_list
 from data.mimic_dataset import MimicDataset
 from llava.mm_utils import get_model_name_from_path, process_images
-from torch.cuda.amp import autocast, GradScaler
-from encoder import get_encoder
+from encoder import get_encoder, lora
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train encoder')
     parser.add_argument('--encoder-path', type=str, required=True, help='path to encoder checkpoint')
-    parser.add_argument('--lora', default=False, action='store_true', help='apply lora')
     parser.add_argument('--output_classes', type=int, default=3, help='number of classes')
     parser.add_argument('--annotation', type=str, required=True, help='training dataset')
     parser.add_argument('--root-dir', type=str, required=True, help='path to dataset image dir')
@@ -35,6 +33,10 @@ if __name__ == '__main__':
     parser.add_argument('--validation_interval', type=int, default=None,
                         help='how many batches to wait before validating')
     parser.add_argument('--debug', action='store_true', default=False, help='log debug messages')
+    parser.add_argument('--lora', action='store_true', default=False, help='apply lora')
+    parser.add_argument('--lora_rank', type=int, default=16, help='rank of lora')
+    parser.add_argument('--lora_alpha', type=int, default=32, help='alpha of lora')
+    parser.add_argument('--lora_dropout', type=float, default=0.5, help='dropout of lora')
 
     args = parser.parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -51,7 +53,6 @@ if __name__ == '__main__':
 
     # class weights
     weights = balance_weights(args.annotation, mimic_classifier_list, args.output_classes)
-
     logging.debug('number of training batches: {}'.format(len(train_dataloader)))
     logging.debug('number of training examples: {}'.format(len(train_data)))
     logging.debug('number of validation batches: {}'.format(len(val_dataloader)))
@@ -67,8 +68,10 @@ if __name__ == '__main__':
     multi_classifier.to(device)
 
     name = get_model_name_from_path(args.encoder_path)
-    encoder, preprocess = get_encoder(args.encoder_path, name)
+    encoder, preprocess = get_encoder(args.encoder_path)
     encoder.to(device, dtype=torch.float)
+    if args.lora:
+        encoder = lora(encoder, args.lora_rank, args.lora_alpha, args.lora_dropout)
 
     logging.info('backbone size: {}'.format(model_size(encoder)))
     logging.info('backbone learnable params: {}'.format(learnable_parameters(encoder)))
@@ -76,11 +79,7 @@ if __name__ == '__main__':
     logging.info('adapter learnable params: {}'.format(learnable_parameters(multi_classifier)))
 
     optim = Adam(list(encoder.parameters()) + list(multi_classifier.parameters()), lr=args.lr)
-    scaler = GradScaler()
 
-    if args.lora:
-        # TODO: apply LoRA here
-        raise NotImplementedError
 
     # for logging purposes
     training_loss = []
@@ -101,7 +100,8 @@ if __name__ == '__main__':
         for i, batch in tqdm(enumerate(train_dataloader), desc="Epoch {}".format(epoch), total=len(train_dataloader)):
             optim.zero_grad()
             # with autocast():
-            embeddings = encoder(batch['image'])
+            with torch.no_grad():
+                embeddings = encoder(batch['image'])
             # print(embeddings)
             b, c, d = embeddings.shape
             embeddings = embeddings.reshape(b, c*d)
@@ -128,15 +128,13 @@ if __name__ == '__main__':
 
             if len(accumulated_loss) > 0:
                 epoch_loss = sum(accumulated_loss) / len(mimic_classifier_list)
-                epoch_loss = scaler.scale(epoch_loss)
                 # print('loss', epoch_loss.item())
                 epoch_loss.backward()
-                # optim.step()
-                scaler.step(optim)
-                scaler.update()
+                optim.step()
                 # logging
                 step_training_loss.append(epoch_loss.detach().cpu().item())
             else:
+                logging.warning(f'step {i} loss is nan')
                 step_training_loss.append(0)
 
             # validation loop

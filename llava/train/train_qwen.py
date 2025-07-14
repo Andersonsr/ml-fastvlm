@@ -35,7 +35,6 @@ from llava.train.llava_trainer import LLaVATrainer
 from llava import conversation as conversation_lib
 from llava.model import *
 from llava.mm_utils import tokenizer_image_token, process_anyres_image
-
 from PIL import Image
 
 
