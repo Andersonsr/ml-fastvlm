@@ -35,9 +35,12 @@ if __name__ == '__main__':
     encoder, preprocess = get_encoder(args.model_base_path)
     if config['lora']:
         encoder = lora(encoder, config['lora_rank'], config['lora_alpha'], config['lora_dropout'])
-
-    encoder.load_state_dict(torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'),
+        encoder.base_model.model.load_state_dict(torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'),
                                                         map_location=device)['model_state_dict'])
+    else:
+        encoder.load_state_dict(torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'),
+                                                            map_location=device)['model_state_dict'])
+
     classifier.load_state_dict(torch.load(os.path.join(args.model_path, 'classifier_checkpoint.pt'),
                                           map_location=device)['model_state_dict'])
 

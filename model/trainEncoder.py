@@ -64,7 +64,7 @@ if __name__ == '__main__':
         args.logging_interval = len(train_dataloader)
 
     os.makedirs(args.output_dir, exist_ok=True)
-    multi_classifier = MultiClassifier(mimic_classifier_list, 256*3072, args.output_classes)
+    multi_classifier = MultiClassifier(mimic_classifier_list, 3072*256, args.output_classes)
     multi_classifier.to(device)
 
     name = get_model_name_from_path(args.encoder_path)
@@ -99,9 +99,8 @@ if __name__ == '__main__':
         # training loop
         for i, batch in tqdm(enumerate(train_dataloader), desc="Epoch {}".format(epoch), total=len(train_dataloader)):
             optim.zero_grad()
-            # with autocast():
-            with torch.no_grad():
-                embeddings = encoder(batch['image'])
+            # images = preprocess()
+            embeddings = encoder(batch['image'].to(device))
             # print(embeddings)
             b, c, d = embeddings.shape
             embeddings = embeddings.reshape(b, c*d)

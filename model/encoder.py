@@ -19,7 +19,7 @@ from util import learnable_parameters
 def get_encoder(model_path):
     model_name = get_model_name_from_path(model_path)
     _, model, image_processor, _ = load_pretrained_model(model_path, None, model_name, device="cuda:0", )
-    return model.model.vision_tower, image_processor
+    return model.get_vision_tower(), image_processor
 
 
 def lora(model, r, alpha, dropout):
@@ -42,7 +42,8 @@ if __name__ == '__main__':
     image = Image.open("E:\\datasets\\mimic\\preprocess\\resize_1024\\0000c2f5-f02f9f3c-1ed14642-958de0ad-d6ce4d20.jpg").convert('RGB')
     image_tensor = process_images([image], image_processor, model.config)[0].unsqueeze(0)
     print('image shape', image_tensor.shape)
-    output = model.get_vision_tower()(image_tensor)
+    encoder = model.get_vision_tower().vision_tower.to(device="cuda:0", dtype=torch.float)
+    output = encoder(image_tensor.to(device="cuda:0", dtype=torch.float))
     print('embeddings shape', output.shape)
     projector = model.model.mm_projector.to(dtype=torch.float32)
     projected = projector(output)
@@ -50,7 +51,7 @@ if __name__ == '__main__':
 
     # for name, module in model.named_modules():
     #     print(name)
-    # print(model.get_vision_tower().vision_tower.model.network)
+    print(model.get_vision_tower().vision_tower)
     # print(model.get_vision_tower().vision_tower.model.network[10])
     encoder = lora(model.get_vision_tower(), 16, 32, 0.5)
     output = encoder(image_tensor)

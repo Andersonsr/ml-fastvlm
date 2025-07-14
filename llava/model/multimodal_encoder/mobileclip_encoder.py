@@ -70,9 +70,9 @@ class MobileCLIPVisionTower(nn.Module):
     def forward(self, images):
         if self.tune_vision_tower:
             return self.forward_images(images)
-        else:
-            with torch.no_grad():
-                return self.forward_images(images)
+        # else:
+        #     with torch.no_grad():
+        #         return self.forward_images(images)
 
     def forward_images(self, images):
         if type(images) is list:
