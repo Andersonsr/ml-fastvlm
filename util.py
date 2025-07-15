@@ -97,7 +97,17 @@ if __name__ == "__main__":
     # from model.classifiers import mimic_classifier_list
     # path = 'E:\\datasets\\mimic\\preprocess\\train_split.json'
     # balance_weights(path, mimic_classifier_list, 4)
+    from llava.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path
+    from llava.model.builder import load_pretrained_model
+    model_path = 'checkpoints/llava-fastvithd_0.5b_stage3'
+    model_name = get_model_name_from_path(model_path)
+    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
+                                                                           device="cuda:0")
 
-    x = [0. for i in range(100)]
-    y = [1. for i in range(2)]
-    plot_curves(x, y, 'teste.png')
+    state = load_safetensors_file('checkpoints/llava-fastvithd_0.5b_stage3/model.safetensors')
+    weights = {'0.bias': state['model.mm_projector.0.bias'],
+               '0.weight': state['model.mm_projector.0.weight'],
+               '2.weight': state['model.mm_projector.2.weight'],
+               '2.bias': state['model.mm_projector.2.bias']}
+    model.model.mm_projector.load_state_dict(weights)
+

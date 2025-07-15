@@ -73,6 +73,7 @@ def unfreeze_stages(model):
 if __name__ == '__main__':
     model_path = '../checkpoints/llava-fastvithd_0.5b_stage3'
     model_name = get_model_name_from_path(model_path)
+    print(model_name)
     tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
                                                                            device="cuda:0")
     image = Image.open("E:\\datasets\\mimic\\preprocess\\resize_1024\\0000c2f5-f02f9f3c-1ed14642-958de0ad-d6ce4d20.jpg").convert('RGB')
@@ -85,9 +86,9 @@ if __name__ == '__main__':
     projected = projector(output)
     print('projected shape', projected.shape)
 
-    # print(model.get_vision_tower().vision_tower)
+    # print(model)
 
-    unfreeze_stages(model.get_vision_tower().vision_tower)
+    # unfreeze_stages(model.get_vision_tower().vision_tower)
 
     # encoder = lora(model.get_vision_tower(), 16, 32, 0.5)
     # output = encoder(image_tensor)

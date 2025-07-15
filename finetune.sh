@@ -1,8 +1,10 @@
 #!/bin/bash
 
-python llava\\train\\train_qwen.py \
-    --model_name_or_path checkpoints/mimic-finetune \
-    --vision_tower checkpoints/mimic-finetune \
+python llava\\train\\train_rx.py \
+    --model_name_or_path checkpoints/llava-fastvithd_0.5b_stage3 \
+    --vision_tower checkpoints/llava-fastvithd_0.5b_stage3 \
+    --tuned_vision_tower checkpoints/classification-4 \
+    --projector_only \
     --version v1 \
     --data_path E:\\datasets\\mimic\\preprocess\\train_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \

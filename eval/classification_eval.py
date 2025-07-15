@@ -1,8 +1,7 @@
 import argparse
 import json
-
-import torch
 import sys
+import torch
 import os
 from sklearn.metrics import classification_report
 from torch.nn.functional import softmax

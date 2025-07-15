@@ -52,7 +52,7 @@ if __name__ == '__main__':
                 # new annotation
                 for key, item in sample['chexpert_labels'].items():
                     if math.isnan(item):
-                        new_labels[key] = 3
+                        new_labels[key] = 0
                     else:
                         new_labels[key] = 2 if item < 0 else item
 

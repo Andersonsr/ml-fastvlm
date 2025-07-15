@@ -12,5 +12,5 @@ if __name__ == '__main__':
         new_sample['conversations'].append({'from': 'gpt', 'value': sample['findings']})
         new_data.append(new_sample)
 
-    json.dump(new_data, open('E:\\datasets\\mimic\\preprocess\\train_split_llava.json', 'w'), indent=2)
+    json.dump(new_data, open('E:\\datasets\\mimic\\preprocess\\micro_split_llava.json', 'w'), indent=2)
 
