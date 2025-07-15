@@ -18,7 +18,7 @@ class MimicDataset(torch.utils.data.Dataset):
         assert os.path.isdir(root_dir), '{} is not a dir'.format(root_dir)
 
         self.root = root_dir
-        self.data = json.load(open(json_file, 'r'))[:10]
+        self.data = json.load(open(json_file, 'r'))
 
     def __len__(self):
         return len(self.data)

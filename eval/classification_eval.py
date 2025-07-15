@@ -4,7 +4,6 @@ import sys
 import torch
 import os
 from sklearn.metrics import classification_report
-from torch.nn.functional import softmax
 # path trick
 path = os.path.normpath(os.path.join(os.path.join(os.path.abspath(__file__)), '..', '..'))
 sys.path.append(path)
@@ -13,7 +12,6 @@ from model.classifiers import MultiClassifier
 from tqdm import tqdm
 from model.classifiers import mimic_classifier_list
 from model.encoder import get_encoder, lora
-import pandas as pd
 
 
 if __name__ == '__main__':
@@ -60,9 +58,12 @@ if __name__ == '__main__':
             labels = batch['labels']
             for name in mimic_classifier_list:
                 logits = classifier_logits[name]
-                pred = torch.argmax(logits, dim=1)
-                predictions[name] += pred.tolist()
-                gt[name] += labels[name]
+                pred = torch.argmax(logits, dim=1).tolist()
+                # print('a', pred)
+                for i in labels[name]:
+                    if i < config['output_classes']:
+                        gt[name].append(labels[name][int(i)])
+                        predictions[name].append(pred[int(i)])
 
     target_names = ['negative', 'positive', 'uncertain', 'not present']
     result_dict = []
