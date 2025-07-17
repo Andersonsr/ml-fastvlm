@@ -1,6 +1,7 @@
 import json
 from tqdm import tqdm
 
+
 if __name__ == '__main__':
     filename = "E:\\datasets\\mimic\\preprocess\\train_split.json"
     data = json.load(open(filename, 'r'))

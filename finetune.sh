@@ -4,21 +4,20 @@ python llava\\train\\train_rx.py \
     --model_name_or_path checkpoints/llava-fastvithd_0.5b_stage3 \
     --vision_tower checkpoints/llava-fastvithd_0.5b_stage3 \
     --tuned_vision_tower checkpoints/classification-4 \
-    --projector_only \
-    --version v1 \
-    --data_path E:\\datasets\\mimic\\preprocess\\train_split_llava.json \
+    --tuned_projector checkpoints/projector-c3 \
+    --version qwen_2 \
+    --data_path E:\\datasets\\mimic\\preprocess\\micro_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
     --mm_use_im_start_end True \
     --mm_use_im_patch_token False \
     --image_aspect_ratio pad \
     --group_by_modality_length True \
     --bf16 True \
-    --output_dir D:\\modelos_v2\\decoder-tune \
+    --output_dir D:\\modelos_v2\\stage3 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 4 \
-    --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 50000 \
     --save_total_limit 1 \
@@ -26,11 +25,15 @@ python llava\\train\\train_rx.py \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
-    --logging_steps 1 \
+    --logging_steps 100 \
     --tf32 True \
     --model_max_length 2048 \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --lazy_preprocess True \
+    --lora_enable \
+    --lora_dropout 0.5 \
+    --lora_r 4 \
+    --lora_alpha 8 \
 
 

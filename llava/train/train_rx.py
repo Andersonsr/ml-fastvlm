@@ -123,16 +123,7 @@ class TrainingArguments(transformers.TrainingArguments):
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
-    from deepspeed import zero
-    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
-    if hasattr(param, "ds_id"):
-        if param.ds_status == ZeroParamStatus.NOT_AVAILABLE:
-            if not ignore_status:
-                logging.warning(f"{name}: param.ds_status != ZeroParamStatus.NOT_AVAILABLE: {param.ds_status}")
-        with zero.GatheredParameters([param]):
-            param = param.data.detach().cpu().clone()
-    else:
-        param = param.detach().cpu().clone()
+    param = param.detach().cpu().clone()
     return param
 
 
@@ -1123,23 +1114,23 @@ def train(attn_implementation=None):
 
             model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
-    if training_args.lora_enable:
-        from peft import LoraConfig, get_peft_model
-        lora_config = LoraConfig(
-            r=training_args.lora_r,
-            lora_alpha=training_args.lora_alpha,
-            target_modules=find_all_linear_names(model),
-            lora_dropout=training_args.lora_dropout,
-            bias=training_args.lora_bias,
-            task_type="CAUSAL_LM",
-        )
-        if training_args.bits == 16:
-            if training_args.bf16:
-                model.to(torch.bfloat16)
-            if training_args.fp16:
-                model.to(torch.float16)
-        rank0_print("Adding LoRA adapters...")
-        model = get_peft_model(model, lora_config)
+    # if training_args.lora_enable:
+    #     from peft import LoraConfig, get_peft_model
+    #     lora_config = LoraConfig(
+    #         r=training_args.lora_r,
+    #         lora_alpha=training_args.lora_alpha,
+    #         target_modules=find_all_linear_names(model),
+    #         lora_dropout=training_args.lora_dropout,
+    #         bias=training_args.lora_bias,
+    #         task_type="CAUSAL_LM",
+    #     )
+    #     if training_args.bits == 16:
+    #         if training_args.bf16:
+    #             model.to(torch.bfloat16)
+    #         if training_args.fp16:
+    #             model.to(torch.float16)
+    #     rank0_print("Adding LoRA adapters...")
+    #     model = get_peft_model(model, lora_config)
 
     if 'mpt' in model_args.model_name_or_path:
         tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -1244,7 +1235,6 @@ def train(attn_implementation=None):
         # print(encoder)
         model.model.vision_tower.load_state_dict(state)
 
-
     # load finetuned projector
     if model_args.tuned_projector:
         if not os.path.exists(os.path.join(model_args.tuned_projector, 'projector.pt')):
@@ -1261,14 +1251,32 @@ def train(attn_implementation=None):
                                                                           model_args.tuned_projector))
         else:
             state = torch.load(os.path.join(model_args.tuned_projector, 'projector.pt'), weights_only=False)
-            print(state)
             model.model.mm_projector.load_state_dict(state)
 
+
+    if training_args.lora_enable:
+        from peft import LoraConfig, get_peft_model
+        lora_config = LoraConfig(
+            r=training_args.lora_r,
+            lora_alpha=training_args.lora_alpha,
+            target_modules=find_all_linear_names(model),
+            lora_dropout=training_args.lora_dropout,
+            bias=training_args.lora_bias,
+            task_type="CAUSAL_LM",
+        )
+        if training_args.bits == 16:
+            if training_args.bf16:
+                model.to(torch.bfloat16)
+            if training_args.fp16:
+                model.to(torch.float16)
+        rank0_print("Adding LoRA adapters...")
+        model = get_peft_model(model, lora_config)
+
+    # freeze everything but the projector
     if training_args.projector_only:
         for name, param in model.named_parameters():
             if 'mm_projector' not in name:
                 param.requires_grad = False
-
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
