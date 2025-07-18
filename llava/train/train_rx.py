@@ -1046,6 +1046,7 @@ def train(attn_implementation=None):
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
     local_rank = training_args.local_rank
     compute_dtype = (torch.float16 if training_args.fp16 else (torch.bfloat16 if training_args.bf16 else torch.float32))
 
@@ -1230,6 +1231,11 @@ def train(attn_implementation=None):
                                             config['lora_alpha'],
                                             config['lora_dropout'])
 
+        model_args.__dict__['encoder_lora_enable'] = config['lora']
+        model_args.__dict__['encoder_lora_r'] = config['lora_rank']
+        model_args.__dict__['encoder_lora_alpha'] = config['lora_alpha']
+        model_args.__dict__['encoder_lora_dropout'] = config['lora_dropout']
+
         state = torch.load(os.path.join(model_args.tuned_vision_tower, 'backbone_checkpoint.pt'))[
             'model_state_dict']
         # print(encoder)
@@ -1252,7 +1258,6 @@ def train(attn_implementation=None):
         else:
             state = torch.load(os.path.join(model_args.tuned_projector, 'projector.pt'), weights_only=False)
             model.model.mm_projector.load_state_dict(state)
-
 
     if training_args.lora_enable:
         from peft import LoraConfig, get_peft_model
@@ -1317,6 +1322,13 @@ def train(attn_implementation=None):
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,
                                        output_dir=training_args.output_dir)
+
+    model_args.__dict__['decoder_lora_enable'] = training_args.__dict__['lora_enable']
+    model_args.__dict__['decoder_lora_r'] = training_args.__dict__['lora_r']
+    model_args.__dict__['decoder_lora_alpha'] = training_args.__dict__['lora_alpha']
+    model_args.__dict__['decoder_lora_dropout'] = training_args.__dict__['lora_dropout']
+    model_args.__dict__['decoder_lora_bias'] = training_args.__dict__['lora_bias']
+    json.dump(model_args.__dict__, open(os.path.join(training_args.output_dir, 'model_args.json'), 'w'), indent=2)
 
 
 if __name__ == "__main__":
