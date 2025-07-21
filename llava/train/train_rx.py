@@ -546,6 +546,8 @@ def preprocess_qwen_2(
             conv.append_message(role, sentence["value"])
         conversations.append(conv.get_prompt())
 
+    print(conv.get_prompt())
+
     if has_image:
         input_ids = torch.stack(
             [tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)

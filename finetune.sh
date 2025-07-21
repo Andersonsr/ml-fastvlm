@@ -8,7 +8,7 @@ python llava\\train\\train_rx.py \
     --projector_only \
     --data_path E:\\datasets\\mimic\\preprocess\\micro_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
-    --mm_use_im_start_end True \
+    --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --image_aspect_ratio pad \
     --group_by_modality_length True \
