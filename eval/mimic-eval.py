@@ -1,6 +1,7 @@
 """
 Code adapted from https://github.com/microsoft/LLaVA-Rad/
 """
+import argparse
 from typing import List
 import os
 import json
@@ -260,6 +261,9 @@ def main(
 
 
 if __name__ == "__main__":
-    main('checkpoints/mimic-finetune/mimic-predictions'
-         '.json',
-         output_dir='checkpoints/mimic-finetune/')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pred", required=True, type=str, help="path to predictions")
+    args = parser.parse_args()
+
+    main(args.pred,
+         output_dir=os.path.dirname(args.pred))

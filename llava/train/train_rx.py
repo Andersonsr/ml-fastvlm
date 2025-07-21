@@ -1170,6 +1170,8 @@ def train(attn_implementation=None):
         else:
             conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 
+    print('vocabulary length', len(tokenizer))
+
     if model_args.vision_tower is not None:
         model.get_model().initialize_vision_modules(
             model_args=model_args,
@@ -1244,6 +1246,7 @@ def train(attn_implementation=None):
     # load finetuned projector
     if model_args.tuned_projector:
         if not os.path.exists(os.path.join(model_args.tuned_projector, 'projector.pt')):
+            # probably never used
             if os.path.exists(os.path.join(model_args.tuned_projector, 'model.safetensors')):
                 state = load_safetensors_file(os.path.join(model_args.tuned_projector, 'model.safetensors'))
                 weights = {'0.bias': state['model.mm_projector.0.bias'],
@@ -1282,6 +1285,8 @@ def train(attn_implementation=None):
         for name, param in model.named_parameters():
             if 'mm_projector' not in name:
                 param.requires_grad = False
+            else:
+                param.requires_grad = True
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
@@ -1317,7 +1322,11 @@ def train(attn_implementation=None):
             torch.save(non_lora_state_dict, os.path.join(training_args.output_dir, 'non_lora_trainables.bin'))
 
     if training_args.projector_only:
-        torch.save(model.model.mm_projector.state_dict(), os.path.join(training_args.output_dir, 'projector.pt'))
+        if training_args.lora_enable:
+            torch.save(model.base_model.model.model.mm_projector.state_dict(), os.path.join(training_args.output_dir, 'projector.pt'))
+
+        else:
+            torch.save(model.model.mm_projector.state_dict(), os.path.join(training_args.output_dir, 'projector.pt'))
 
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,

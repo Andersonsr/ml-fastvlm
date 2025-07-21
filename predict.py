@@ -24,7 +24,7 @@ def caption(model, tokenizer, image_processor, args, image_path):
     conv.append_message(conv.roles[0], args.prompt)
     conv.append_message(conv.roles[1], '')
     prompt = conv.get_prompt()
-
+    # print(prompt)
     # Tokenize prompt
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(
         torch.device("cuda:0"))
@@ -34,7 +34,7 @@ def caption(model, tokenizer, image_processor, args, image_path):
     image_tensor = process_images([image], image_processor, model.config)[0]
     # print(image_tensor.shape)
     # print(len(tokenizer))
-    # print(input_ids)
+    # print('input_ids length:', input_ids.shape[1])
 
     # Run inference
     with torch.inference_mode():
@@ -63,44 +63,15 @@ def predict(args):
                   generation_config)
 
     # Load model
-    model_name = get_model_name_from_path(args.model_base)
-    tokenizer, model, image_processor, context_len = load_pretrained_model(args.model_base, None, model_name,
-                                                                           device="cuda:0")
-    state = load_safetensors_file(os.path.join(args.model_path, 'model.safetensors'))
-
-    tokenizer.add_tokens([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True)
-    model.resize_token_embeddings(len(tokenizer))
-
-    if os.path.exists(os.path.join(args.model_path, 'model_args.json')):
-        config = json.load(open(os.path.join(args.model_path, 'model_args.json'), 'r'))
-
-        if config['encoder_lora_enable']:
-            model.model.vision_tower = lora(model.model.vision_tower,
-                                            config['encoder_lora_r'],
-                                            config['encoder_lora_alpha'],
-                                            config['encoder_lora_dropout'])
-
-        if config['decoder_lora_enable']:
-            from peft import LoraConfig, get_peft_model
-            lora_config = LoraConfig(
-                r=config['decoder_lora_r'],
-                lora_alpha=config['decoder_lora_alpha'],
-                target_modules=find_all_linear_names(model),
-                lora_dropout=config['decoder_lora_dropout'],
-                bias=config['decoder_lora_bias'],
-                task_type="CAUSAL_LM",
-            )
-            model = get_peft_model(model, lora_config)
-            model.base_model.model.load_state_dict(state)
-
-        else:
-            model.load_state_dict(state)
+    tokenizer, model, image_processor, context_len = load_pretrained_model(args.model_path, None, 'llava-fastvithd_0.5b_stage3',
+                                                             device="cuda:0")
 
     result = {'generated': []}
     root, extension = os.path.splitext(args.annotation)
 
     # Set the pad token id for generation
     model.generation_config.pad_token_id = tokenizer.pad_token_id
+    model.to('cuda:0')
 
     if extension.lower() == '.json':
         data = json.load(open(args.annotation, 'r'))
@@ -112,7 +83,7 @@ def predict(args):
         json.dump(result, open(os.path.join(args.model_path, 'mimic-predictions.json'), 'w'), indent=2)
 
     elif extension.lower() == '.jpg':
-        print(caption(model, tokenizer, image_processor, args, args.file))
+        print(caption(model, tokenizer, image_processor, args, args.annotation))
 
     # Restore generation config
     if generation_config is not None:
@@ -122,7 +93,7 @@ def predict(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default="")
-    parser.add_argument("--model_base", type=str, default=None)
+    # parser.add_argument("--model_base", type=str, default=None)
     parser.add_argument("--image_root", type=str, default=None, help="location of image file")
     parser.add_argument("--annotation", type=str, default=None, help="location of json annotation or image file")
     parser.add_argument("--conv_mode", type=str, default="qwen_2")

@@ -2,10 +2,10 @@
 
 python llava\\train\\train_rx.py \
     --model_name_or_path checkpoints/llava-fastvithd_0.5b_stage3 \
-    --vision_tower checkpoints/llava-fastvithd_0.5b_stage3 \
+    --vision_tower  checkpoints/llava-fastvithd_0.5b_stage3 \
     --tuned_vision_tower checkpoints/classification-4 \
-    --tuned_projector checkpoints/projector-c3 \
     --version qwen_2 \
+    --projector_only \
     --data_path E:\\datasets\\mimic\\preprocess\\micro_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
     --mm_use_im_start_end True \
@@ -13,7 +13,7 @@ python llava\\train\\train_rx.py \
     --image_aspect_ratio pad \
     --group_by_modality_length True \
     --bf16 True \
-    --output_dir D:\\modelos_v2\\stage3 \
+    --output_dir checkpoints\\stage2-4c \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
