@@ -5,7 +5,6 @@ python llava\\train\\train_rx.py \
     --vision_tower  checkpoints/llava-fastvithd_0.5b_stage3 \
     --tuned_vision_tower checkpoints/classification-4 \
     --version qwen_2 \
-    --projector_only \
     --data_path E:\\datasets\\mimic\\preprocess\\micro_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
     --mm_use_im_start_end False \

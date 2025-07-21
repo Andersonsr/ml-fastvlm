@@ -546,7 +546,7 @@ def preprocess_qwen_2(
             conv.append_message(role, sentence["value"])
         conversations.append(conv.get_prompt())
 
-    print(conv.get_prompt())
+    # print(conv.get_prompt())
 
     if has_image:
         input_ids = torch.stack(
@@ -1226,8 +1226,6 @@ def train(attn_implementation=None):
 
     # load finetuned encoder
     if model_args.tuned_vision_tower:
-        # print(model)
-        # return
         config = json.load(open(os.path.join(model_args.tuned_vision_tower, 'experiment.json'), 'r'))
         if config['lora']:
             model.model.vision_tower = lora(model.model.vision_tower,
@@ -1242,7 +1240,7 @@ def train(attn_implementation=None):
 
         state = torch.load(os.path.join(model_args.tuned_vision_tower, 'backbone_checkpoint.pt'))[
             'model_state_dict']
-        # print(encoder)
+
         model.model.vision_tower.load_state_dict(state)
 
     # load finetuned projector
@@ -1301,7 +1299,14 @@ def train(attn_implementation=None):
     # print(model)
     sys.path.append(os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..', '..', '..')))
     # print(model_size(model))
-    print(learnable_parameters(model))
+    if training_args.lora_enable:
+        print('projector',learnable_parameters(model.base_model.model.model.mm_projector))
+        print('vision', learnable_parameters(model.base_model.model.model.vision_tower))
+        print('language', learnable_parameters(model.base_model.model.model.layers))
+    else:
+        print('projector', learnable_parameters(model.model.mm_projector))
+        print('vision', learnable_parameters(model.model.vision_tower))
+        print('language', learnable_parameters(model.model.layers))
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
