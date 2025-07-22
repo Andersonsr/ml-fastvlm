@@ -6,6 +6,7 @@ import json
 
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
+    # print(vision_tower_cfg)
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))
     is_absolute_path_exists = os.path.exists(vision_tower)
     use_s2 = getattr(vision_tower_cfg, 's2', False)
@@ -16,11 +17,14 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         else:
             return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
     elif "mobileclip" in vision_tower.lower():
+        print(vision_tower_cfg._name_or_path)
         if os.path.exists(os.path.join(vision_tower_cfg._name_or_path, 'model_args.json')):
+            # print('LOOOOOOOOOOOORA')
             # model trained with classification loss, maybe lora
             config = json.load(open(os.path.join(vision_tower_cfg._name_or_path, 'model_args.json'), 'r'))
 
             if config['encoder_lora_enable']:
+
                 model = MobileCLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
                 lora_config = LoraConfig(
                     r=config['encoder_lora_r'],

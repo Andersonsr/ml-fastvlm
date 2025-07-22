@@ -160,6 +160,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
     if 'llava' in model_name.lower():
         mm_use_im_start_end = getattr(model.config, "mm_use_im_start_end", False)
         mm_use_im_patch_token = getattr(model.config, "mm_use_im_patch_token", True)
+
         if mm_use_im_patch_token:
             print('added patch tokenizer')
             tokenizer.add_tokens([DEFAULT_IMAGE_PATCH_TOKEN], special_tokens=True)

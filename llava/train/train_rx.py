@@ -1295,8 +1295,9 @@ def train(attn_implementation=None):
                            args=training_args,
                            **data_module)
 
+    model.config.rx_output_dir = training_args.output_dir
     model = model.to('cuda:0')
-    # print(model)
+
     sys.path.append(os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..', '..', '..')))
     # print(model_size(model))
     if training_args.lora_enable:
@@ -1316,6 +1317,7 @@ def train(attn_implementation=None):
 
     model.config.use_cache = True
 
+
     if training_args.lora_enable:
         state_dict = get_peft_state_maybe_zero_3(
             model.named_parameters(), training_args.lora_bias
@@ -1324,6 +1326,7 @@ def train(attn_implementation=None):
             model.named_parameters()
         )
         if training_args.local_rank == 0 or training_args.local_rank == -1:
+
             model.config.save_pretrained(training_args.output_dir)
             model.save_pretrained(training_args.output_dir, state_dict=state_dict)
             torch.save(non_lora_state_dict, os.path.join(training_args.output_dir, 'non_lora_trainables.bin'))
@@ -1349,3 +1352,4 @@ def train(attn_implementation=None):
 
 if __name__ == "__main__":
     train(attn_implementation=None)
+    # NAO USAR LORA NO DECODER, FODEU TUDO

@@ -72,6 +72,7 @@ def predict(args):
     # Set the pad token id for generation
     model.generation_config.pad_token_id = tokenizer.pad_token_id
     model.to('cuda:0')
+    # print(model.model.vision_tower.base_model.model)
 
     if extension.lower() == '.json':
         data = json.load(open(args.annotation, 'r'))

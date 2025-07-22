@@ -83,11 +83,15 @@ def balance_weights(json_file, class_list, number_of_classes):
             if label in dado['labels'].keys():
                 if dado['labels'][label] < number_of_classes:
                     counts[label].append(dado['labels'][label])
-
+    # print(counts['Pleural Other'])
     weights = {}
     for class_name in class_list:
-        occurrences = np.array(counts[class_name])
-        weight = compute_class_weight('balanced', classes=np.unique(occurrences), y=counts[class_name])
+        occurrences = np.unique(counts[class_name])
+        for value in range(number_of_classes):
+            if value not in occurrences:
+                counts[class_name].append(value)
+
+        weight = compute_class_weight('balanced', classes=np.array(range(number_of_classes)), y=counts[class_name])
         weights[class_name] = torch.tensor(weight)
     # print(weights)
     return weights

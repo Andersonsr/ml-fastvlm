@@ -3,9 +3,9 @@ from tqdm import tqdm
 
 
 if __name__ == '__main__':
-    for name in ['train_split_filter', 'dev_split_filter', 'dev_split', 'test_split', 'train_split']:
+    for name in ['train_split_filter', 'dev_split_filter', 'dev_split', 'test_split', 'train_split', 'micro_split']:
         filename = f"E:\\datasets\\mimic\\preprocess\\{name}.json"
-        data = json.load(open(filename, 'r'))
+        data = json.load(open(filename, 'r'))[:16]
         new_data = []
         for sample in tqdm(data):
             new_sample = {'image': sample['image_name'], 'id': sample['id'], 'conversations': []}

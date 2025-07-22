@@ -157,8 +157,9 @@ if __name__ == '__main__':
                 for batch in val_dataloader:
                     with torch.no_grad():
                         embeddings = encoder(batch['image'].to(device))
-                        b, c, d = embeddings.shape
-                        embeddings = embeddings.reshape(b, c * d)
+                        if len(embeddings.shape) > 2:
+                            b, c, d = embeddings.shape
+                            embeddings = embeddings.reshape(b, c * d)
 
                         classifier_logits = multi_classifier(embeddings)
                         accumulated_loss = 0
