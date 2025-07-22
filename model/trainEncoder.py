@@ -39,6 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--lora_dropout', type=float, default=0.5, help='dropout of lora')
     parser.add_argument('--dim', type=int, default=3072*256, help='dimension of encoder output')
     parser.add_argument('--unfreeze', action='store_true', default=False, help='unfreeze')
+    parser.add_argument('--modules', type=str, default=None, choices=['fc', 'mixer'])
 
     args = parser.parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -66,7 +67,7 @@ if __name__ == '__main__':
         args.logging_interval = len(train_dataloader)
 
     os.makedirs(args.output_dir, exist_ok=True)
-    multi_classifier = MultiClassifier(mimic_classifier_list, 3072*256, args.output_classes)
+    multi_classifier = MultiClassifier(mimic_classifier_list, args.dim, args.output_classes)
     multi_classifier.to(device)
 
     name = get_model_name_from_path(args.encoder_path)
@@ -76,7 +77,14 @@ if __name__ == '__main__':
         encoder = lora(encoder, args.lora_rank, args.lora_alpha, args.lora_dropout)
 
     if args.unfreeze:
-        unfreeze_stages(encoder)
+        if args.modules == 'fc':
+            modules = ['fc1', 'fc2']
+        elif args.modules == 'mixer':
+            modules = ['token_mixer']
+        else:
+            raise ValueError('arg modules must be "fc" or "mixer"')
+
+        unfreeze_stages(encoder, modules)
 
     logging.info('backbone size: {}'.format(model_size(encoder)))
     logging.info('backbone learnable params: {}'.format(learnable_parameters(encoder)))
@@ -105,9 +113,11 @@ if __name__ == '__main__':
             optim.zero_grad()
             # images = preprocess()
             embeddings = encoder(batch['image'].to(device))
-            # print(embeddings)
-            b, c, d = embeddings.shape
-            embeddings = embeddings.reshape(b, c*d)
+            # print(embeddings.shape)
+            if len(embeddings.shape) > 2:
+                b, c, d = embeddings.shape
+                embeddings = embeddings.reshape(b, c*d)
+
             logging.debug('image shape: {}'.format(batch['image'].shape))
             logging.debug('embedding shape: {}'.format(embeddings.shape))
 

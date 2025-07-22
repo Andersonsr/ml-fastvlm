@@ -36,7 +36,7 @@ def lora(model, r, alpha, dropout):
     return get_peft_model(model, lora_config)
 
 
-def unfreeze_stages(model):
+def unfreeze_stages(model, modules):
     if type(model) == MobileCLIPVisionTower:
         network = model.vision_tower.model.network
 
@@ -44,22 +44,27 @@ def unfreeze_stages(model):
         network = model.model.network
 
     elif type(model) == PeftModel:
-        # print(type(model.base_model.model))
         if type(model.base_model.model) == MobileCLIPVisionTower:
             network = model.base_model.model.vision_tower.model.network
 
         elif type(model.base_model.model) == MCi:
-            network = model.base_model.model.network
+            network = model.base_model.model.model.network
 
     else:
         raise NotImplementedError('Unsupported model type {}'.format(type(model)))
 
     for name, param in network[2].named_parameters():
-        if 'fc1' in name or 'fc2' in name:
-            # print(name)
-            param.requires_grad = True
+        # if 'fc1' in name or 'fc2' in name:
+        for module in modules:
+            if module in name:
+                param.requires_grad = True
 
     for name, param in network[4].named_parameters():
-        if 'fc1' in name or 'fc2' in name:
-            # print(name)
-            param.requires_grad = True
+        # if 'fc1' in name or 'fc2' in name:
+        for module in modules:
+            if module in name:
+                # print(name)
+                param.requires_grad = True
+
+    # print(model)
+
