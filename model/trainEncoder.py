@@ -110,6 +110,8 @@ if __name__ == '__main__':
 
         # training loop
         for i, batch in tqdm(enumerate(train_dataloader), desc="Epoch {}".format(epoch), total=len(train_dataloader)):
+            if i < 877:
+                continue
             optim.zero_grad()
             # images = preprocess()
             embeddings = encoder(batch['image'].to(device))
@@ -122,15 +124,15 @@ if __name__ == '__main__':
             logging.debug('embedding shape: {}'.format(embeddings.shape))
 
             classifier_logits = multi_classifier(embeddings)
-            accumulated_loss = []
+            total_loss = []
 
             for name in classifiers_names:
                 target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
-                CE = nn.CrossEntropyLoss(ignore_index=args.output_classes, weight=weights[name].to(device, dtype=torch.float))
+                CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.float))
                 loss = CE(classifier_logits[name], target)
                 # print(loss)
                 if not np.isnan(loss.cpu().detach().numpy()):
-                    accumulated_loss.append(loss)
+                    total_loss.append(loss)
                     # logging
                     step_classifier_loss[name].append(loss.detach().cpu().item())
                     classifier_loss[name].append(loss.detach().cpu().item())
@@ -139,8 +141,8 @@ if __name__ == '__main__':
                     step_classifier_loss[name].append(0.)
                     classifier_loss[name].append(0.)
 
-            if len(accumulated_loss) > 0:
-                epoch_loss = sum(accumulated_loss) / len(mimic_classifier_list)
+            if len(total_loss) > 0:
+                epoch_loss = sum(total_loss) / len(mimic_classifier_list)
                 # print('loss', epoch_loss.item())
                 epoch_loss.backward()
                 optim.step()
@@ -162,17 +164,17 @@ if __name__ == '__main__':
                             embeddings = embeddings.reshape(b, c * d)
 
                         classifier_logits = multi_classifier(embeddings)
-                        accumulated_loss = 0
+                        total_loss = 0
 
                         for name in classifiers_names:
                             target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
-                            CE = nn.CrossEntropyLoss(ignore_index=args.output_classes, weight=weights[name].to(device, dtype=torch.float))
+                            CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.float))
                             loss = CE(classifier_logits[name], target)
                             if np.isnan(loss.cpu().detach().numpy()):
                                 # all labels are equal to ignore index
                                 loss = torch.tensor(0.0).to(device)
-                            accumulated_loss += loss
-                        step_validation_loss.append(accumulated_loss.item())
+                            total_loss += loss
+                        step_validation_loss.append(total_loss.item())
 
                 validation_loss.append(sum(step_validation_loss)/len(step_validation_loss))
 
