@@ -21,7 +21,7 @@ from encoder import get_encoder, lora, unfreeze_stages
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train encoder')
     parser.add_argument('--encoder-path', type=str, required=True, help='path to encoder checkpoint')
-    parser.add_argument('--output_classes', type=int, default=3, help='number of classes')
+    parser.add_argument('--output_classes', type=int, default=3, choices=[3, 4], help='number of classes')
     parser.add_argument('--annotation', type=str, required=True, help='training dataset')
     parser.add_argument('--root-dir', type=str, required=True, help='path to dataset image dir')
     parser.add_argument('--batch_size', type=int, default=8, help='batch size')
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     logging.info('device: {}'.format(device))
     logging.info('Loading data...')
 
-    train_data = MimicDataset(args.root_dir, args.annotation)
-    val_data = MimicDataset(args.root_dir, args.annotation.replace('train', 'dev'))
+    train_data = MimicDataset(args.root_dir, args.annotation, zeroed=True if args.output_classes == 3 else False)
+    val_data = MimicDataset(args.root_dir, args.annotation.replace('train', 'dev'), zeroed=True if args.output_classes == 3 else False)
     classifiers_names = mimic_classifier_list
 
     train_dataloader = train_data.get_loader(args.batch_size)

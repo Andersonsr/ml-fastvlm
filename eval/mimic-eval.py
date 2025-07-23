@@ -12,11 +12,9 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from sacrebleu.metrics import BLEU
-
+from radgraph import F1RadGraph
 import rrg_eval.chexbert
 import rrg_eval.rouge
-# import rrg_eval.f1radgraph
-# from rrg_eval.f1radgraph import F1RadGraphv2
 from rrg_eval.factuality_utils import CONDITIONS
 
 try:
@@ -63,17 +61,8 @@ def bertscore(predictions, references):
     return evaluate.load("bertscore").compute(predictions=predictions, references=references)["f1"]
 
 
-# def radgraph(predictions, references, bootstrap_ci: bool = False):
-#     if bootstrap_ci:
-#         reward_list = F1RadGraphv2(reward_level="partial", batch_size=1)(hyps=predictions, refs=references)[1]
-#         bs = rrg_eval.f1radgraph.bootstrap_confidence_interval(reward_list, n_resamples=500)
-#         return {
-#             "median": np.median(bs.bootstrap_distribution),
-#             "ci_l": bs.confidence_interval.low,
-#             "ci_h": bs.confidence_interval.high,
-#         }
-#     else:
-#         return F1RadGraphv2(reward_level="partial", batch_size=1)(hyps=predictions, refs=references)[0]
+def radgraph(predictions, references):
+    return F1RadGraph(reward_level="partial", batch_size=1)(hyps=predictions, refs=references)[0]
 
 
 def chexbert(predictions, references, bootstrap_ci: bool = False):
@@ -86,7 +75,7 @@ SCORER_NAME_TO_CLASS = {
     "BLEU-4": bleu4,
     "BLEU-1": bleu1,
     "BERTScore": bertscore,
-    # "F1-RadGraph": radgraph,
+    "F1-RadGraph": radgraph,
     "CheXbert": chexbert,
 }
 
@@ -192,7 +181,9 @@ def main(
             'CheXbert',
             'BLEU-1',
             'BLEU-4',
-            'ROUGE-L'
+            'ROUGE-L',
+            "F1-RadGraph"
+            'Rad'
         ]
 
     evaluator = ReportGenerationEvaluator(scorers=scorers, bootstrap_ci=bootstrap_ci)
@@ -209,14 +200,14 @@ def main(
         print(main_results[[
             "Micro-F1-14", "Micro-F1-5", "Macro-F1-14", "Macro-F1-5",
             "Micro-F1-14+", "Micro-F1-5+", "Macro-F1-14+", "Macro-F1-5+",
-            "BLEU-1", "BLEU-4", "ROUGE-L"
+            "BLEU-1", "BLEU-4", "ROUGE-L", "F1-RadGraph"
         ]])
     else:
         main_results = pd.DataFrame.from_dict({k:v for k,v in results.items() if type(v)!= dict}, 'index')
         print(main_results.T[[
             "Micro-F1-14", "Micro-F1-5", "Macro-F1-14", "Macro-F1-5",
             "Micro-F1-14+", "Micro-F1-5+", "Macro-F1-14+", "Macro-F1-5+",
-            "BLEU-1", "BLEU-4", "ROUGE-L"
+            "BLEU-1", "BLEU-4", "ROUGE-L", "F1-RadGraph"
         ]])
     print("")
 

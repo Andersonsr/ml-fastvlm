@@ -13,12 +13,13 @@ to_tensor = ToTensor()
 
 
 class MimicDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, json_file):
+    def __init__(self, root_dir, json_file, zeroed=False):
         assert os.path.exists(json_file), '{} does not exist'.format(json_file)
         assert os.path.isdir(root_dir), '{} is not a dir'.format(root_dir)
 
         self.root = root_dir
         self.data = json.load(open(json_file, 'r'))
+        self.zeroed = zeroed
 
     def __len__(self):
         return len(self.data)
@@ -51,7 +52,9 @@ class MimicDataset(torch.utils.data.Dataset):
 
         for labels in data['labels']:
             for key in reorganized_labels.keys():
-                reorganized_labels[key].append(labels[key])
+                # print('old', labels[key])
+                # print('new', 0 if labels[key] == 3 and self.zeroed else labels[key])
+                reorganized_labels[key].append(0 if self.zeroed and labels[key] == 3 else labels[key])
 
         data['labels'] = reorganized_labels
         return data
@@ -175,8 +178,9 @@ class MimicChunkDataset(torch.utils.data.Dataset):
 
 
 if __name__ == '__main__':
-    dataset = MimicDataset('E:\\datasets\\mimic\\preprocess\\resize_1024', 'E:\\datasets\\mimic\\preprocess\\train_split.json')
+    dataset = MimicDataset('E:\\datasets\\mimic\\preprocess\\resize_1024', 'E:\\datasets\\mimic\\preprocess\\train_split.json', zeroed=True)
     loader = dataset.get_loader(4)
     from tqdm import tqdm
     for batch in tqdm(loader):
+        # print(batch['labels'])
         pass

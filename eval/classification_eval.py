@@ -29,18 +29,23 @@ if __name__ == '__main__':
     loader = data.get_loader(args.batch_size)
     config = json.load(open(os.path.join(args.model_path, 'experiment.json'), 'r'))
 
-    classifier = MultiClassifier(mimic_classifier_list, args.dim, config['output_classes']).to(device)
+    classifier = MultiClassifier(mimic_classifier_list, args.dim, config['output_classes']).to(device, dtype=torch.float)
     encoder, preprocess = get_encoder(args.model_base_path, args.dim)
-    if config['lora']:
-        encoder = lora(encoder, config['lora_rank'], config['lora_alpha'], config['lora_dropout'])
-        encoder.load_state_dict(torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'),
-                                                        map_location=device)['model_state_dict'])
-    else:
-        encoder.load_state_dict(torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'),
-                                                            map_location=device)['model_state_dict'])
+    encoder.to(dtype=torch.float)
 
-    classifier.load_state_dict(torch.load(os.path.join(args.model_path, 'classifier_checkpoint.pt'),
-                                          map_location=device)['model_state_dict'])
+    if config['lora']:
+        print('Loading lora model')
+        encoder = lora(encoder, config['lora_rank'], config['lora_alpha'], config['lora_dropout'])
+        model_dict = torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'))['model_state_dict']
+        encoder.load_state_dict(model_dict)
+
+    else:
+        print('loading model')
+        model_dict = torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'))['model_state_dict']
+        encoder.load_state_dict(model_dict)
+
+    model_dict = torch.load(os.path.join(args.model_path, 'classifier_checkpoint.pt'))['model_state_dict']
+    classifier.load_state_dict(model_dict)
 
     predictions = {}
     gt = {}
@@ -50,9 +55,9 @@ if __name__ == '__main__':
 
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
         with torch.no_grad():
-            image_features = encoder(batch['image'])
-            b, c, d = image_features.shape
-            image_features = image_features.reshape(b, c * d)
+            image_features = encoder(batch['image'].to(device, dtype=torch.float))
+            # b, c, d = image_features.shape
+            # image_features = image_features.reshape(b, c * d)
             # print(classifier)
             classifier_logits = classifier(image_features)
             labels = batch['labels']

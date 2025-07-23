@@ -83,10 +83,13 @@ def balance_weights(json_file, class_list, number_of_classes):
             if label in dado['labels'].keys():
                 if dado['labels'][label] < number_of_classes:
                     counts[label].append(dado['labels'][label])
-    # print(counts['Pleural Other'])
+                else:
+                    counts[label].append(0)
+
     weights = {}
     for class_name in class_list:
         occurrences = np.unique(counts[class_name])
+        # check if all possible values are present in data
         for value in range(number_of_classes):
             if value not in occurrences:
                 counts[class_name].append(value)
