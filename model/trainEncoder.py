@@ -110,8 +110,6 @@ if __name__ == '__main__':
 
         # training loop
         for i, batch in tqdm(enumerate(train_dataloader), desc="Epoch {}".format(epoch), total=len(train_dataloader)):
-            if i < 877:
-                continue
             optim.zero_grad()
             # images = preprocess()
             embeddings = encoder(batch['image'].to(device))
