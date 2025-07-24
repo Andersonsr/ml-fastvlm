@@ -182,7 +182,6 @@ def main(
             'BLEU-1',
             'BLEU-4',
             'ROUGE-L',
-            "F1-RadGraph"
             'Rad'
         ]
 
@@ -200,14 +199,14 @@ def main(
         print(main_results[[
             "Micro-F1-14", "Micro-F1-5", "Macro-F1-14", "Macro-F1-5",
             "Micro-F1-14+", "Micro-F1-5+", "Macro-F1-14+", "Macro-F1-5+",
-            "BLEU-1", "BLEU-4", "ROUGE-L", "F1-RadGraph"
+            "BLEU-1", "BLEU-4", "ROUGE-L",
         ]])
     else:
         main_results = pd.DataFrame.from_dict({k:v for k,v in results.items() if type(v)!= dict}, 'index')
         print(main_results.T[[
             "Micro-F1-14", "Micro-F1-5", "Macro-F1-14", "Macro-F1-5",
             "Micro-F1-14+", "Micro-F1-5+", "Macro-F1-14+", "Macro-F1-5+",
-            "BLEU-1", "BLEU-4", "ROUGE-L", "F1-RadGraph"
+            "BLEU-1", "BLEU-4", "ROUGE-L",
         ]])
     print("")
 

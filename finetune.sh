@@ -3,7 +3,8 @@
 python llava\\train\\train_rx.py \
     --model_name_or_path checkpoints/llava-fastvithd_0.5b_stage3 \
     --vision_tower  checkpoints/llava-fastvithd_0.5b_stage3 \
-    --tuned_vision_tower checkpoints/classification-4 \
+    --tuned_vision_tower checkpoints/class-3-mixer-lora \
+    --projector_only True\
     --version qwen_2 \
     --data_path E:\\datasets\\mimic\\preprocess\\micro_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
@@ -30,9 +31,9 @@ python llava\\train\\train_rx.py \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --lazy_preprocess True \
-    --lora_enable \
-    --lora_dropout 0.5 \
-    --lora_r 4 \
-    --lora_alpha 8 \
+#    --lora_enable \
+#    --lora_dropout 0.5 \
+#    --lora_r 4 \
+#    --lora_alpha 8 \
 
 

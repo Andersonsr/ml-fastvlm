@@ -21,23 +21,26 @@ if __name__ == '__main__':
     parser.add_argument('--annotation_file', type=str, required=True, help='annotation file')
     parser.add_argument('--model_path', type=str, required=True, help='path to saved model weights')
     parser.add_argument('--model_base_path', type=str, required=True, help='path to base model')
-    parser.add_argument('--dim', type=int, default=256*3072)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "")
-    data = MimicDataset(args.root_dir, args.annotation_file)
-    loader = data.get_loader(args.batch_size)
     config = json.load(open(os.path.join(args.model_path, 'experiment.json'), 'r'))
+    data = MimicDataset(args.root_dir, args.annotation_file, zeroed=True if config['output_classes'] == 3 else False)
+    loader = data.get_loader(args.batch_size)
 
-    classifier = MultiClassifier(mimic_classifier_list, args.dim, config['output_classes']).to(device, dtype=torch.float)
-    encoder, preprocess = get_encoder(args.model_base_path, args.dim)
+    classifier = MultiClassifier(mimic_classifier_list, config['dim'], config['output_classes']).to(device, dtype=torch.float)
+    encoder, preprocess = get_encoder(args.model_base_path, config['dim'])
     encoder.to(dtype=torch.float)
 
     if config['lora']:
         print('Loading lora model')
-        encoder = lora(encoder, config['lora_rank'], config['lora_alpha'], config['lora_dropout'])
-        model_dict = torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'))['model_state_dict']
-        encoder.load_state_dict(model_dict)
+        if config['dim'] == 768:
+            encoder = lora(encoder, config['lora_rank'], config['lora_alpha'], config['lora_dropout'])
+            model_dict = torch.load(os.path.join(args.model_path, 'backbone_checkpoint.pt'))['model_state_dict']
+            encoder.load_state_dict(model_dict)
+
+        else:
+            raise Exception('Not implemented yet')
 
     else:
         print('loading model')
@@ -69,8 +72,15 @@ if __name__ == '__main__':
                     if i < config['output_classes']:
                         gt[name].append(labels[name][int(i)])
                         predictions[name].append(pred[int(i)])
+                    else:
+                        gt[name].append(0)
+                        predictions[name].append(0)
 
-    target_names = ['negative', 'positive', 'uncertain', 'not present']
+    if config['output_classes'] == 4:
+        target_names = ['negative', 'positive', 'uncertain', 'not present']
+    else:
+        target_names = ['negative', 'positive', 'uncertain']
+
     result_dict = []
     for name in mimic_classifier_list:
         report = classification_report(gt[name], predictions[name], labels=range(len(target_names)), target_names=target_names, zero_division=0, output_dict=True)

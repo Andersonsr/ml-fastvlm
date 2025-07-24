@@ -16,6 +16,7 @@ from model.classifiers import mimic_classifier_list
 to_tensor = transforms.ToTensor()
 import torch
 
+
 def fix_mimic_chunk_labels(filename):
     '''
     edit chunk file with reorganized labels
@@ -140,12 +141,21 @@ def check_mimic_max_resolution():
 
 
 if __name__ == '__main__':
-    data = json.load(open('E:\\datasets\\mimic\\preprocess\\train_split.json', 'r'))
-    new_data = []
-    for sample in data:
-        if 'No Finding' in sample['labels'].keys() and sample['labels']['No Finding'] != 1:
-            new_data.append(sample)
+    import pandas as pd
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    results = {'experiment': [], 'condition': [], 'f1-score': [], 'recall': [], 'precision': []}
 
-    print(len(data), len(new_data))
-    json.dump(new_data, open('E:\\datasets\\mimic\\preprocess\\train_split_filter.json', 'w'), indent=2)
+    for name in ['class-3-mixer-lora', 'class-4-mixer-lora']:
+        data = json.load(open(f'checkpoints/{name}/classification_eval.json'))
+        for e in data:
+            results['experiment'].append(name)
+            results['condition'].append(e['condition'])
+            results['f1-score'].append(e['report']['macro avg']['f1-score'])
+            results['recall'].append(e['report']['macro avg']['recall'])
+            results['precision'].append(e['report']['macro avg']['precision'])
+
+    df = pd.DataFrame(results)
+    sns.barplot(df, y='condition', x='f1-score', hue='experiment')
+    plt.show()
 

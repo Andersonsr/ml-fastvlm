@@ -1227,11 +1227,13 @@ def train(attn_implementation=None):
     # load finetuned encoder
     if model_args.tuned_vision_tower:
         config = json.load(open(os.path.join(model_args.tuned_vision_tower, 'experiment.json'), 'r'))
+        assert config['dim'] == 768, 'Dimension mismatch encoder output dim must be 768'
+        # print(model.model.vision_tower.vision_tower)
         if config['lora']:
-            model.model.vision_tower = lora(model.model.vision_tower,
-                                            config['lora_rank'],
-                                            config['lora_alpha'],
-                                            config['lora_dropout'])
+            model.model.vision_tower.vision_tower = lora(model.model.vision_tower.vision_tower,
+                                                         config['lora_rank'],
+                                                         config['lora_alpha'],
+                                                         config['lora_dropout'])
 
         model_args.__dict__['encoder_lora_enable'] = config['lora']
         model_args.__dict__['encoder_lora_r'] = config['lora_rank']
@@ -1240,28 +1242,17 @@ def train(attn_implementation=None):
 
         state = torch.load(os.path.join(model_args.tuned_vision_tower, 'backbone_checkpoint.pt'))[
             'model_state_dict']
-
-        model.model.vision_tower.load_state_dict(state)
+        # print(state.keys())
+        model.model.vision_tower.vision_tower.load_state_dict(state)
 
     # load finetuned projector
     if model_args.tuned_projector:
-        if not os.path.exists(os.path.join(model_args.tuned_projector, 'projector.pt')):
-            # probably never used
-            if os.path.exists(os.path.join(model_args.tuned_projector, 'model.safetensors')):
-                state = load_safetensors_file(os.path.join(model_args.tuned_projector, 'model.safetensors'))
-                weights = {'0.bias': state['model.mm_projector.0.bias'],
-                           '0.weight': state['model.mm_projector.0.weight'],
-                           '2.weight': state['model.mm_projector.2.weight'],
-                           '2.bias': state['model.mm_projector.2.bias']}
-                model.model.mm_projector.load_state_dict(weights)
-            else:
-                raise FileNotFoundError('{} or {} not found at {}'.format('model.safetensors',
-                                                                          'projector.pt',
-                                                                          model_args.tuned_projector))
-        else:
-            state = torch.load(os.path.join(model_args.tuned_projector, 'projector.pt'), weights_only=False)
-            model.model.mm_projector.load_state_dict(state)
+        projector_file = os.path.join(model_args.tuned_projector, 'projector.pt')
+        assert os.path.exists(projector_file), f'{projector_file} not found!'
+        state = torch.load(os.path.join(model_args.tuned_projector, 'projector.pt'), weights_only=False)
+        model.model.mm_projector.load_state_dict(state)
 
+    # decoder lora
     if training_args.lora_enable:
         from peft import LoraConfig, get_peft_model
         lora_config = LoraConfig(
@@ -1352,4 +1343,3 @@ def train(attn_implementation=None):
 
 if __name__ == "__main__":
     train(attn_implementation=None)
-    # NAO USAR LORA NO DECODER, FODEU TUDO

@@ -118,6 +118,7 @@ if __name__ == '__main__':
                 b, c, d = embeddings.shape
                 embeddings = embeddings.reshape(b, c*d)
 
+
             logging.debug('image shape: {}'.format(batch['image'].shape))
             logging.debug('embedding shape: {}'.format(embeddings.shape))
 
