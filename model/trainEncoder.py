@@ -68,11 +68,12 @@ if __name__ == '__main__':
 
     os.makedirs(args.output_dir, exist_ok=True)
     multi_classifier = MultiClassifier(mimic_classifier_list, args.dim, args.output_classes)
-    multi_classifier.to(device)
+    multi_classifier.to(device, dtype=torch.bfloat16)
 
     name = get_model_name_from_path(args.encoder_path)
     encoder, preprocess = get_encoder(args.encoder_path, args.dim)
-    encoder.to(device, dtype=torch.float)
+    encoder.to(device)
+
     if args.lora:
         encoder = lora(encoder, args.lora_rank, args.lora_alpha, args.lora_dropout)
 
@@ -112,12 +113,11 @@ if __name__ == '__main__':
         for i, batch in tqdm(enumerate(train_dataloader), desc="Epoch {}".format(epoch), total=len(train_dataloader)):
             optim.zero_grad()
             # images = preprocess()
-            embeddings = encoder(batch['image'].to(device))
+            embeddings = encoder(batch['image'].to(device, dtype=torch.bfloat16))
             # print(embeddings.shape)
             if len(embeddings.shape) > 2:
                 b, c, d = embeddings.shape
                 embeddings = embeddings.reshape(b, c*d)
-
 
             logging.debug('image shape: {}'.format(batch['image'].shape))
             logging.debug('embedding shape: {}'.format(embeddings.shape))
@@ -127,10 +127,10 @@ if __name__ == '__main__':
 
             for name in classifiers_names:
                 target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
-                CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.float))
+                CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.bfloat16))
                 loss = CE(classifier_logits[name], target)
                 # print(loss)
-                if not np.isnan(loss.cpu().detach().numpy()):
+                if not np.isnan(loss.detach().to(dtype=torch.float32).cpu().numpy()):
                     total_loss.append(loss)
                     # logging
                     step_classifier_loss[name].append(loss.detach().cpu().item())
@@ -157,7 +157,7 @@ if __name__ == '__main__':
 
                 for batch in val_dataloader:
                     with torch.no_grad():
-                        embeddings = encoder(batch['image'].to(device))
+                        embeddings = encoder(batch['image'].to(device, dtype=torch.bfloat16))
                         if len(embeddings.shape) > 2:
                             b, c, d = embeddings.shape
                             embeddings = embeddings.reshape(b, c * d)
@@ -167,9 +167,9 @@ if __name__ == '__main__':
 
                         for name in classifiers_names:
                             target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
-                            CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.float))
+                            CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.bfloat16))
                             loss = CE(classifier_logits[name], target)
-                            if np.isnan(loss.cpu().detach().numpy()):
+                            if np.isnan(loss.to(dtype=torch.float32).cpu().detach().numpy()):
                                 # all labels are equal to ignore index
                                 loss = torch.tensor(0.0).to(device)
                             total_loss += loss
