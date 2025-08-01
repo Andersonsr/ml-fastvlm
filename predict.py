@@ -83,7 +83,7 @@ def predict(args):
 
         json.dump(result, open(os.path.join(args.model_path, 'mimic-predictions.json'), 'w'), indent=2)
 
-    elif extension.lower() == '.jpg':
+    elif extension.lower() == '.jpg' or extension.lower() == '.png':
         print(caption(model, tokenizer, image_processor, args, args.annotation))
 
     # Restore generation config

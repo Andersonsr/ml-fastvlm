@@ -10,13 +10,20 @@ from llava.model.builder import load_pretrained_model
 from llava.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path
 from llava.model.multimodal_encoder.mobileclip_encoder import MobileCLIPVisionTower
 from peft import LoraConfig, get_peft_model
-from llava.model.multimodal_encoder.mobileclip import MCi
+from llava.model import *
 from peft.peft_model import PeftModel
 
 
-def get_encoder(model_path, dim):
+def get_encoder(model_path, dim, bf16=True):
     model_name = get_model_name_from_path(model_path)
     _, model, image_processor, _ = load_pretrained_model(model_path, None, model_name, device="cuda:0", )
+
+    model = LlavaQwen2ForCausalLM.from_pretrained(
+        model_path,
+        attn_implementation=None,
+        torch_dtype=(torch.bfloat16 if bf16 else None),
+    )
+
     if dim == 3072*256:
         return model.get_vision_tower(), image_processor
 

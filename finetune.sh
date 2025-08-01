@@ -4,7 +4,7 @@ python llava\\train\\train_rx.py \
     --model_name_or_path checkpoints/llava-fastvithd_0.5b_stage3 \
     --vision_tower  checkpoints/llava-fastvithd_0.5b_stage3 \
     --tuned_vision_tower checkpoints/class-3-mixer-lora \
-    --projector_only True\
+    --tuned_projector checkpoints/projector-c3ml \
     --version qwen_2 \
     --data_path E:\\datasets\\mimic\\preprocess\\micro_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
@@ -13,11 +13,11 @@ python llava\\train\\train_rx.py \
     --image_aspect_ratio pad \
     --group_by_modality_length True \
     --bf16 True \
-    --output_dir checkpoints\\stage2-4c \
+    --output_dir checkpoints\\test \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 4 \
+    --gradient_accumulation_steps 1 \
     --save_strategy "steps" \
     --save_steps 50000 \
     --save_total_limit 1 \
@@ -25,7 +25,7 @@ python llava\\train\\train_rx.py \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
-    --logging_steps 100 \
+    --logging_steps 1 \
     --tf32 True \
     --model_max_length 2048 \
     --gradient_checkpointing True \

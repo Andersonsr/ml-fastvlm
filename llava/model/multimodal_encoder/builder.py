@@ -17,14 +17,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         else:
             return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
     elif "mobileclip" in vision_tower.lower():
-        print(vision_tower_cfg._name_or_path)
         if os.path.exists(os.path.join(vision_tower_cfg._name_or_path, 'model_args.json')):
-            # print('LOOOOOOOOOOOORA')
-            # model trained with classification loss, maybe lora
             config = json.load(open(os.path.join(vision_tower_cfg._name_or_path, 'model_args.json'), 'r'))
 
             if config['encoder_lora_enable']:
-
                 model = MobileCLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
                 lora_config = LoraConfig(
                     r=config['encoder_lora_r'],
@@ -34,7 +30,8 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
                     bias='lora_only',
                     task_type="IMAGE_CLASSIFICATION",
                 )
-                return get_peft_model(model, lora_config)
+                model.vision_tower = get_peft_model(model.vision_tower, lora_config)
+                return model
 
         return MobileCLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
 

@@ -627,6 +627,7 @@ def preprocess_qwen_2(
                     f" (ignored)"
                 )
 
+    # print(input_ids)
     return dict(
         input_ids=input_ids,
         labels=targets,
@@ -1044,7 +1045,7 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
 
 def train(attn_implementation=None):
     global local_rank
-
+    # print('ATT', attn_implementation)
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
@@ -1070,6 +1071,7 @@ def train(attn_implementation=None):
                 bnb_4bit_quant_type=training_args.quant_type  # {'fp4', 'nf4'}
             )
         ))
+    print("BNB", bnb_model_from_pretrained_args)
 
     if model_args.vision_tower is not None:
         if 'mpt' in model_args.model_name_or_path:

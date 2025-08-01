@@ -478,5 +478,5 @@ conv_templates = {
 if __name__ == "__main__":
     conv = default_conversation.copy()
     conv.append_message(conv.roles[0], "describe the findings in <image>")
-    conv.append_message(conv.roles[1], '')
+    conv.append_message(conv.roles[1], 'esta é uma imagem muito boa')
     print(conv.get_prompt())
