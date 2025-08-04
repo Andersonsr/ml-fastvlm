@@ -31,6 +31,8 @@ def get_encoder(model_path, dim, bf16=True):
         return model.get_vision_tower().vision_tower, image_processor
 
 
+
+
 def lora(model, r, alpha, dropout):
     lora_config = LoraConfig(
         r=r,

@@ -17,6 +17,7 @@ from data.mimic_dataset import MimicDataset
 from llava.mm_utils import get_model_name_from_path, process_images
 from encoder import get_encoder, lora, unfreeze_stages
 
+# TODO: add dtype as argument
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train encoder')
