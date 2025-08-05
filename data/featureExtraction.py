@@ -31,9 +31,9 @@ if __name__ == '__main__':
     logger = logging.getLogger('captioning')
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
     model, preprocess = get_encoder(args.base_model, 768, bf16=False)
-    experiment = json.load(open(os.path.join(os.path.dirname(args.model), 'experiment.json'), 'r'))
 
     if args.model is not None:
+        experiment = json.load(open(os.path.join(os.path.dirname(args.model), 'experiment.json'), 'r'))
         if experiment['lora']:
             model = lora(model, experiment['lora_rank'], experiment['lora_alpha'], experiment['lora_dropout'])
         model.load_state_dict(torch.load(args.model)['model_state_dict'])
