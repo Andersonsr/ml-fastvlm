@@ -54,7 +54,10 @@ class MimicDataset(torch.utils.data.Dataset):
             for key in reorganized_labels.keys():
                 # print('old', labels[key])
                 # print('new', 0 if labels[key] == 3 and self.zeroed else labels[key])
-                reorganized_labels[key].append(0 if self.zeroed and labels[key] == 3 else labels[key])
+                if key in labels.keys():
+                    reorganized_labels[key].append(0 if self.zeroed and labels[key] == 3 else labels[key])
+                else:
+                    reorganized_labels[key].append(0 if self.zeroed else 3)
 
         data['labels'] = reorganized_labels
         return data

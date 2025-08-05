@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     classifier = MultiClassifier(mimic_classifier_list, config['dim'], config['output_classes']).to(device, dtype=torch.float)
     encoder, preprocess = get_encoder(args.model_base_path, config['dim'])
-    encoder.to(dtype=torch.float)
+    encoder.to(device, dtype=torch.float)
 
     if config['lora']:
         print('Loading lora model')
