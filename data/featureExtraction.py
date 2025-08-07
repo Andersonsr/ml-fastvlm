@@ -37,7 +37,8 @@ if __name__ == '__main__':
         if experiment['lora']:
             model = lora(model, experiment['lora_rank'], experiment['lora_alpha'], experiment['lora_dropout'])
         model.load_state_dict(torch.load(args.model)['model_state_dict'])
-        model.to(device)
+
+    model.to(device)
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
 

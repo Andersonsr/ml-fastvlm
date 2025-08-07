@@ -17,7 +17,7 @@ from data.mimic_dataset import MimicDataset
 from llava.mm_utils import get_model_name_from_path, process_images
 from encoder import get_encoder, lora, unfreeze_stages
 
-# TODO: add dtype as argument
+# TODO: add dtype as argument, up
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train encoder')
@@ -41,13 +41,15 @@ if __name__ == '__main__':
     parser.add_argument('--dim', type=int, default=3072*256, help='dimension of encoder output')
     parser.add_argument('--unfreeze', action='store_true', default=False, help='unfreeze')
     parser.add_argument('--modules', type=str, default=None, choices=['fc', 'mixer'])
+    parser.add_argument('--bf16', action='store_true', default=False, help='use bf16 precision')
 
     args = parser.parse_args()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu' #torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    dtype = torch.bfloat16 if args.bf16 else torch.float
+
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
     logging.info('device: {}'.format(device))
     logging.info('Loading data...')
-
     train_data = MimicDataset(args.root_dir, args.annotation, zeroed=True if args.output_classes == 3 else False)
     val_data = MimicDataset(args.root_dir, args.annotation.replace('train', 'dev'), zeroed=True if args.output_classes == 3 else False)
     classifiers_names = mimic_classifier_list
@@ -69,16 +71,17 @@ if __name__ == '__main__':
 
     os.makedirs(args.output_dir, exist_ok=True)
     multi_classifier = MultiClassifier(mimic_classifier_list, args.dim, args.output_classes)
-    multi_classifier.to(device, dtype=torch.bfloat16)
+    multi_classifier.to(device, dtype=dtype)
 
     name = get_model_name_from_path(args.encoder_path)
-    encoder, preprocess = get_encoder(args.encoder_path, args.dim)
+    encoder, preprocess = get_encoder(args.encoder_path, args.dim, args.bf16)
     encoder.to(device)
 
     if args.lora:
         encoder = lora(encoder, args.lora_rank, args.lora_alpha, args.lora_dropout)
 
-    if args.unfreeze:
+    # só faz sentido se usado junto
+    if args.unfreeze and args.lora:
         if args.modules == 'fc':
             modules = ['fc1', 'fc2']
         elif args.modules == 'mixer':
@@ -114,7 +117,7 @@ if __name__ == '__main__':
         for i, batch in tqdm(enumerate(train_dataloader), desc="Epoch {}".format(epoch), total=len(train_dataloader)):
             optim.zero_grad()
             # images = preprocess()
-            embeddings = encoder(batch['image'].to(device, dtype=torch.bfloat16))
+            embeddings = encoder(batch['image'].to(device, dtype=dtype))
             # print(embeddings.shape)
             if len(embeddings.shape) > 2:
                 b, c, d = embeddings.shape
@@ -128,7 +131,7 @@ if __name__ == '__main__':
 
             for name in classifiers_names:
                 target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
-                CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.bfloat16))
+                CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=dtype))
                 loss = CE(classifier_logits[name], target)
                 # print(loss)
                 if not np.isnan(loss.detach().to(dtype=torch.float32).cpu().numpy()):
@@ -158,7 +161,7 @@ if __name__ == '__main__':
 
                 for batch in val_dataloader:
                     with torch.no_grad():
-                        embeddings = encoder(batch['image'].to(device, dtype=torch.bfloat16))
+                        embeddings = encoder(batch['image'].to(device, dtype=dtype))
                         if len(embeddings.shape) > 2:
                             b, c, d = embeddings.shape
                             embeddings = embeddings.reshape(b, c * d)
@@ -168,7 +171,7 @@ if __name__ == '__main__':
 
                         for name in classifiers_names:
                             target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
-                            CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=torch.bfloat16))
+                            CE = nn.CrossEntropyLoss(weight=weights[name].to(device, dtype=dtype))
                             loss = CE(classifier_logits[name], target)
                             if np.isnan(loss.to(dtype=torch.float32).cpu().detach().numpy()):
                                 # all labels are equal to ignore index
