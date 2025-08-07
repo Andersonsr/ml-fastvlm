@@ -42,9 +42,10 @@ if __name__ == '__main__':
     parser.add_argument('--unfreeze', action='store_true', default=False, help='unfreeze')
     parser.add_argument('--modules', type=str, default=None, choices=['fc', 'mixer'])
     parser.add_argument('--bf16', action='store_true', default=False, help='use bf16 precision')
+    parser.add_argument('--average_loss', action='store_true', default=False, help='use average loss')
 
     args = parser.parse_args()
-    device = 'cpu' #torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dtype = torch.bfloat16 if args.bf16 else torch.float
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
@@ -145,7 +146,10 @@ if __name__ == '__main__':
                     classifier_loss[name].append(0.)
 
             if len(total_loss) > 0:
-                epoch_loss = sum(total_loss) / len(mimic_classifier_list)
+                epoch_loss = sum(total_loss)
+                if args.average_loss:
+                    epoch_loss /= len(mimic_classifier_list)
+
                 # print('loss', epoch_loss.item())
                 epoch_loss.backward()
                 optim.step()
