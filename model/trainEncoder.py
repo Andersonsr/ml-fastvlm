@@ -1,4 +1,5 @@
 import argparse
+import gc
 import logging
 import os
 import numpy as np
@@ -17,7 +18,6 @@ from data.mimic_dataset import MimicDataset
 from llava.mm_utils import get_model_name_from_path, process_images
 from encoder import get_encoder, lora, unfreeze_stages
 
-# TODO: add dtype as argument, up
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train encoder')
@@ -35,10 +35,10 @@ if __name__ == '__main__':
                         help='how many batches to wait before validating')
     parser.add_argument('--debug', action='store_true', default=False, help='log debug messages')
     parser.add_argument('--lora', action='store_true', default=False, help='apply lora')
-    parser.add_argument('--lora_rank', type=int, default=16, help='rank of lora')
-    parser.add_argument('--lora_alpha', type=int, default=32, help='alpha of lora')
-    parser.add_argument('--lora_dropout', type=float, default=0.5, help='dropout of lora')
-    parser.add_argument('--dim', type=int, default=3072*256, help='dimension of encoder output')
+    parser.add_argument('--lora_rank', type=int, default=16, help='rank for lora')
+    parser.add_argument('--lora_alpha', type=int, default=32, help='alpha for lora')
+    parser.add_argument('--lora_dropout', type=float, default=0.5, help='dropout for lora')
+    parser.add_argument('--dim', type=int, default=3072*256, help='dimension  encoder output')
     parser.add_argument('--unfreeze', action='store_true', default=False, help='unfreeze')
     parser.add_argument('--modules', type=str, default=None, choices=['fc', 'mixer'])
     parser.add_argument('--bf16', action='store_true', default=False, help='use bf16 precision')
@@ -102,17 +102,40 @@ if __name__ == '__main__':
     # for logging purposes
     training_loss = []
     validation_loss = []
-    classifier_loss = {}
+    classifiers_losses = {}
 
     for classifier in classifiers_names:
-        classifier_loss[classifier] = []
+        classifiers_losses[classifier] = []
 
-    for epoch in range(args.epochs):
+    current_epoch = 0
+
+    # Resume
+    if os.path.exists(os.path.join(args.output_dir, 'backbone_checkpoint.pt')):
+        logging.info('restore checkpoint from {}'.format(os.path.join(args.output_dir, 'backbone_checkpoint.pt')))
+        # load model
+        chk = torch.load(os.path.join(args.output_dir, 'backbone_checkpoint.pt'))
+        current_epoch = chk['epoch'] + 1
+        print('LAST EPOCH', current_epoch)
+        encoder.load_state_dict(chk['model_state_dict'])
+        optim.load_state_dict(chk['optimizer_state_dict'])
+
+        # load logs
+        logs = json.load(open(os.path.join(args.output_dir, 'loss_log.json')))
+        training_loss = logs['training_loss']
+        validation_loss = logs['validation_loss']
+        for classifier in classifiers_names:
+            classifiers_losses[classifier] = logs[f'{classifier}_loss']
+
+        chk = None
+        logs = None
+        gc.collect()
+
+    for epoch in range(current_epoch, args.epochs):
         step_training_loss = []
         # epoch loss per classifier
-        step_classifier_loss = {}
+        step_classifiers_losses = {}
         for name in classifiers_names:
-            step_classifier_loss[name] = []
+            step_classifiers_losses[name] = []
 
         # training loop
         for i, batch in tqdm(enumerate(train_dataloader), desc="Epoch {}".format(epoch), total=len(train_dataloader)):
@@ -128,7 +151,7 @@ if __name__ == '__main__':
             logging.debug('embedding shape: {}'.format(embeddings.shape))
 
             classifier_logits = multi_classifier(embeddings)
-            total_loss = []
+            step_total_loss = []
 
             for name in classifiers_names:
                 target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
@@ -136,25 +159,24 @@ if __name__ == '__main__':
                 loss = CE(classifier_logits[name], target)
                 # print(loss)
                 if not np.isnan(loss.detach().to(dtype=torch.float32).cpu().numpy()):
-                    total_loss.append(loss)
+                    step_total_loss.append(loss)
                     # logging
-                    step_classifier_loss[name].append(loss.detach().cpu().item())
-                    classifier_loss[name].append(loss.detach().cpu().item())
+                    step_classifiers_losses[name].append(loss.detach().cpu().item())
 
                 else:
-                    step_classifier_loss[name].append(0.)
-                    classifier_loss[name].append(0.)
+                    step_classifiers_losses[name].append(0.)
 
-            if len(total_loss) > 0:
-                epoch_loss = sum(total_loss)
+            if len(step_total_loss) > 0:
+                epoch_loss = sum(step_total_loss)
                 if args.average_loss:
-                    epoch_loss /= len(mimic_classifier_list)
+                    epoch_loss /= len(classifiers_names)
 
                 # print('loss', epoch_loss.item())
                 epoch_loss.backward()
                 optim.step()
                 # logging
                 step_training_loss.append(epoch_loss.detach().cpu().item())
+
             else:
                 logging.warning(f'step {i} loss is nan')
                 step_training_loss.append(0)
@@ -171,7 +193,7 @@ if __name__ == '__main__':
                             embeddings = embeddings.reshape(b, c * d)
 
                         classifier_logits = multi_classifier(embeddings)
-                        total_loss = 0
+                        step_total_loss = 0
 
                         for name in classifiers_names:
                             target = torch.tensor(batch['labels'][name], dtype=torch.long, device=device)
@@ -180,8 +202,11 @@ if __name__ == '__main__':
                             if np.isnan(loss.to(dtype=torch.float32).cpu().detach().numpy()):
                                 # all labels are equal to ignore index
                                 loss = torch.tensor(0.0).to(device)
-                            total_loss += loss
-                        step_validation_loss.append(total_loss.item())
+                            step_total_loss += loss
+                            if args.average_loss:
+                                step_total_loss /= len(classifiers_names)
+
+                        step_validation_loss.append(step_total_loss.item())
 
                 validation_loss.append(sum(step_validation_loss)/len(step_validation_loss))
 
@@ -192,9 +217,10 @@ if __name__ == '__main__':
                 log = {'training_loss': training_loss, 'validation_loss': validation_loss}
 
                 for classifier in classifiers_names:
-                    classifier_loss[classifier].append(
-                        sum(step_classifier_loss[classifier]) / len(step_classifier_loss[classifier]))
-                    log[classifier + '_loss'] = classifier_loss[classifier]
+                    classifiers_losses[classifier].append(
+                        sum(step_classifiers_losses[classifier]) / len(step_classifiers_losses[classifier]))
+                    log[classifier + '_loss'] = classifiers_losses[classifier]
+                    step_classifiers_losses[classifier] = []
 
                 with open(os.path.join(args.output_dir, 'loss_log.json'), 'w') as f:
                     json.dump(log, f, indent=4)

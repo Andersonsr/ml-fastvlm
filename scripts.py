@@ -146,16 +146,19 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     results = {'experiment': [], 'condition': [], 'f1-score': [], 'recall': [], 'precision': []}
 
-    for name in ['class-3-mixer-lora', 'class-4-mixer-lora']:
-        data = json.load(open(f'checkpoints/{name}/classification_eval.json'))
-        for e in data:
-            results['experiment'].append(name)
-            results['condition'].append(e['condition'])
-            results['f1-score'].append(e['report']['macro avg']['f1-score'])
-            results['recall'].append(e['report']['macro avg']['recall'])
-            results['precision'].append(e['report']['macro avg']['precision'])
+    ckp = torch.load('checkpoints/class-4-full-noavg/backbone_checkpoint.pt')
+    print(ckp.keys())
 
-    df = pd.DataFrame(results)
-    sns.barplot(df, y='condition', x='f1-score', hue='experiment')
-    plt.show()
+    # for name in ['class-3-mixer-lora', 'class-4-mixer-lora']:
+    #     data = json.load(open(f'checkpoints/{name}/classification_eval.json'))
+    #     for e in data:
+    #         results['experiment'].append(name)
+    #         results['condition'].append(e['condition'])
+    #         results['f1-score'].append(e['report']['macro avg']['f1-score'])
+    #         results['recall'].append(e['report']['macro avg']['recall'])
+    #         results['precision'].append(e['report']['macro avg']['precision'])
+    #
+    # df = pd.DataFrame(results)
+    # sns.barplot(df, y='condition', x='f1-score', hue='experiment')
+    # plt.show()
 
