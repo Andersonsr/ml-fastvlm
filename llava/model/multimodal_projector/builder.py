@@ -16,7 +16,7 @@ class IdentityMap(nn.Module):
 
 def build_vision_projector(config, delay_load=False, **kwargs):
     projector_type = getattr(config, 'mm_projector_type', 'linear')
-
+    # print('PROJECTOR TYPE', projector_type)
     if projector_type == 'linear':
         return nn.Linear(config.mm_hidden_size, config.hidden_size)
 
@@ -31,5 +31,14 @@ def build_vision_projector(config, delay_load=False, **kwargs):
 
     if projector_type == 'identity':
         return IdentityMap()
+
+    mapper_match = re.match(r'^mapper(\d+)', projector_type)
+    if mapper_match:
+        k = int(mapper_match.group(1))
+        modules = [nn.Linear(768, config.hidden_size),
+                   nn.GELU(),
+                   nn.Linear(config.hidden_size, config.hidden_size * k),
+                   nn.Unflatten(-1, (k, config.hidden_size))]
+        return nn.Sequential(*modules)
 
     raise ValueError(f'Unknown projector type: {projector_type}')

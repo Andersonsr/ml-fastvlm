@@ -140,25 +140,48 @@ def check_mimic_max_resolution():
     # (4280, 3520)
 
 
-if __name__ == '__main__':
+def mimic_classification_plot():
+    models = ['class-4-mixer-lora', 'class-4-full', 'class-4-full-noavg']
+    for model in models:
+        eval = json.load(open(f'checkpoints/{model}/classification_eval.json', 'r'))
+        for e in eval:
+            print(e)
+        break
+
+
+def plot_f1():
     import pandas as pd
     import seaborn as sns
     import matplotlib.pyplot as plt
     results = {'experiment': [], 'condition': [], 'f1-score': [], 'recall': [], 'precision': []}
 
-    ckp = torch.load('checkpoints/class-4-full-noavg/backbone_checkpoint.pt')
-    print(ckp.keys())
+    for name in ['class-4-full', 'class-4-full-noavg', 'class-4-mixer-lora']:
+        data = json.load(open(f'checkpoints/{name}/classification_eval.json'))
+        for e in data:
+            results['experiment'].append(name)
+            results['condition'].append(e['condition'])
+            results['f1-score'].append(e['report']['macro avg']['f1-score'])
+            results['recall'].append(e['report']['macro avg']['recall'])
+            results['precision'].append(e['report']['macro avg']['precision'])
 
-    # for name in ['class-3-mixer-lora', 'class-4-mixer-lora']:
-    #     data = json.load(open(f'checkpoints/{name}/classification_eval.json'))
-    #     for e in data:
-    #         results['experiment'].append(name)
-    #         results['condition'].append(e['condition'])
-    #         results['f1-score'].append(e['report']['macro avg']['f1-score'])
-    #         results['recall'].append(e['report']['macro avg']['recall'])
-    #         results['precision'].append(e['report']['macro avg']['precision'])
-    #
-    # df = pd.DataFrame(results)
-    # sns.barplot(df, y='condition', x='f1-score', hue='experiment')
-    # plt.show()
+    df = pd.DataFrame(results)
+    ax = sns.barplot(df, y='condition', x='f1-score', hue='experiment')
+    ax.legend(bbox_to_anchor=(0.25, 1.05), loc='lower left', borderaxespad=0.)
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == '__main__':
+    from torch import nn
+    k = 10
+
+    modules = [nn.Linear(1024, 768),
+               nn.GELU(),
+               nn.Linear(768, 768 * k),
+               nn.Unflatten(-1, (k, 768))]
+
+    seq = nn.Sequential(*modules)
+    rand = torch.rand((16, 1024))
+    print(seq(rand).shape)
+
 

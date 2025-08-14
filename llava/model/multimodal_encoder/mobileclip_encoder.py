@@ -13,11 +13,12 @@ import llava.model.multimodal_encoder.mobileclip as mobileclip
 class MobileCLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
         super().__init__()
-
         self.is_loaded = False
         self.vision_tower_name = vision_tower
         self.tune_vision_tower = getattr(args, 'unfreeze_mm_vision_tower', False)
         self.input_image_size = int(vision_tower.split("_")[-1])
+        self.cls_feature = getattr(args, 'cls_feature_mm_vision_tower', False)
+        # print('CLS FEATURE', self.cls_feature)
 
         # Delay load is disabled for now
         if not delay_load:
@@ -40,6 +41,7 @@ class MobileCLIPVisionTower(nn.Module):
         model_cfg["image_cfg"]["image_size"] = self.input_image_size
 
         self.cfg_only = model_cfg
+
 
         # Build HF CLIPImageProcessor with MobileCLIP parameters
         self.image_processor = CLIPImageProcessor(crop_size={"height": model_cfg["image_cfg"]["image_size"],
@@ -70,20 +72,27 @@ class MobileCLIPVisionTower(nn.Module):
     def forward(self, images):
         if self.tune_vision_tower:
             return self.forward_images(images)
-        # else:
-        #     with torch.no_grad():
-        #         return self.forward_images(images)
+        else:
+            with torch.no_grad():
+                return self.forward_images(images)
 
     def forward_images(self, images):
+        # print('CLS FEATURE', self.cls_feature)
         if type(images) is list:
             image_features = []
             for image in images:
-                image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), return_image_embeddings=True)
-                image_feature = self.feature_select(image_forward_out).to(image.dtype)
-                image_features.append(image_feature)
+                image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), return_image_embeddings=not self.cls_feature)
+                if not self.cls_feature:
+                    image_feature = self.feature_select(image_forward_out).to(image.dtype)
+                    image_features.append(image_feature)
+                else:
+                    image_features.append(image_forward_out)
         else:
-            image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), return_image_embeddings=True)
-            image_features = self.feature_select(image_forward_outs).to(images.dtype)
+            image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), return_image_embeddings=not self.cls_feature)
+            if not self.cls_feature:
+                image_features = self.feature_select(image_forward_outs).to(images.dtype)
+            else:
+                image_features = image_forward_outs
 
         return image_features
 

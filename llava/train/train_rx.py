@@ -32,6 +32,7 @@ from llava.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_
 from torch.utils.data import Dataset
 from llava.train.llava_trainer import LLaVATrainer
 from llava import conversation as conversation_lib
+from llava.model.multimodal_projector.builder import build_vision_projector
 from llava.model import *
 from model.encoder import lora, get_encoder
 from llava.mm_utils import tokenizer_image_token, process_anyres_image
@@ -64,6 +65,7 @@ class ModelArguments:
     mm_use_im_patch_token: bool = field(default=True)
     mm_patch_merge_type: Optional[str] = field(default='flat')
     mm_vision_select_feature: Optional[str] = field(default="patch")
+    cls_feature_mm_vision_tower: Optional[str] = field(default=False)
     unfreeze_mm_vision_tower: bool = field(default=False)
     s2: Optional[bool] = field(default=False)
     hd: Optional[bool] = field(default=False)
@@ -1247,6 +1249,18 @@ def train(attn_implementation=None):
         # print(state.keys())
         model.model.vision_tower.vision_tower.load_state_dict(state)
 
+    # starting from pretrained fastVLM, might need to change model
+    if model_args.cls_feature_mm_vision_tower != model.model.vision_tower.cls_feature:
+        print('changing model output feature to match args')
+        model.model.vision_tower.cls_feature = model_args.cls_feature_mm_vision_tower
+        model.config.cls_feature_mm_vision_tower = True
+
+        if model.model.mm_projector[0].in_features != 768:
+            # train projector from scratch
+            model.model.mm_projector = build_vision_projector(model.config)
+
+
+    # TODO: Remover a necessidade de usar isso
     # load finetuned projector
     if model_args.tuned_projector:
         projector_file = os.path.join(model_args.tuned_projector, 'projector.pt')

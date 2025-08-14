@@ -141,3 +141,5 @@ dmypy.json
 app/FastVLM/model
 checkpoints/
 wandb/
+
+model/loss_plot.png

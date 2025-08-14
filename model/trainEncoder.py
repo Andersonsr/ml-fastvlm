@@ -114,7 +114,7 @@ if __name__ == '__main__':
         logging.info('restore checkpoint from {}'.format(os.path.join(args.output_dir, 'backbone_checkpoint.pt')))
         # load model
         chk = torch.load(os.path.join(args.output_dir, 'backbone_checkpoint.pt'))
-        current_epoch = chk['epoch'] + 1
+        current_epoch = chk['epoch']
         print('LAST EPOCH', current_epoch)
         encoder.load_state_dict(chk['model_state_dict'])
         optim.load_state_dict(chk['optimizer_state_dict'])

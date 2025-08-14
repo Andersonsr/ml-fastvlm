@@ -17,8 +17,9 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         else:
             return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
     elif "mobileclip" in vision_tower.lower():
-        if os.path.exists(os.path.join(vision_tower_cfg._name_or_path, 'model_args.json')):
-            config = json.load(open(os.path.join(vision_tower_cfg._name_or_path, 'model_args.json'), 'r'))
+        path = vision_tower_cfg.model_name_or_path if hasattr(vision_tower_cfg, 'model_name_or_path') else vision_tower_cfg._name_or_path
+        if os.path.exists(os.path.join(path, 'model_args.json')):
+            config = json.load(open(os.path.join(path, 'model_args.json'), 'r'))
 
             if config['encoder_lora_enable']:
                 model = MobileCLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)

@@ -1,11 +1,10 @@
 #!/bin/bash
 
 python llava\\train\\train_rx.py \
-    --model_name_or_path checkpoints/llava-fastvithd_0.5b_stage3 \
-    --vision_tower  checkpoints/llava-fastvithd_0.5b_stage3 \
-    --tuned_vision_tower checkpoints/class-3-mixer-lora \
-    --tuned_projector checkpoints/projector-c3ml \
+    --vision_tower  mobileclip_l_1024 \
     --version qwen_2 \
+    --model_name_or_path checkpoints/llava-fastvithd_0.5b_stage3 \
+    --tuned_vision_tower checkpoints/class-4-mixer-lora \
     --data_path E:\\datasets\\mimic\\preprocess\\micro_split_llava.json \
     --image_folder E:\\datasets\\mimic\\preprocess\\resize_1024 \
     --mm_use_im_start_end False \
@@ -31,6 +30,13 @@ python llava\\train\\train_rx.py \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --lazy_preprocess True \
+    --cls_feature_mm_vision_tower True \
+    --mm_projector_type "mapper10" \
+    --tuned_vision_tower checkpoints/class-4-mixer-lora \
+    --projector_only \
+#
+#   \
+#   --tuned_projector checkpoints/projector-c3ml \
 #    --lora_enable \
 #    --lora_dropout 0.5 \
 #    --lora_r 4 \
