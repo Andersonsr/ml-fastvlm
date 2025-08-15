@@ -12,4 +12,5 @@ python ./model/trainEncoder.py \
     --logging_interval 2 \
     --unfreeze_modules mixer \
     --train_mapper \
+    --lora \
 

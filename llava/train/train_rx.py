@@ -1259,15 +1259,6 @@ def train(attn_implementation=None):
             # train projector from scratch
             model.model.mm_projector = build_vision_projector(model.config)
 
-
-    # TODO: Remover a necessidade de usar isso
-    # load finetuned projector
-    if model_args.tuned_projector:
-        projector_file = os.path.join(model_args.tuned_projector, 'projector.pt')
-        assert os.path.exists(projector_file), f'{projector_file} not found!'
-        state = torch.load(os.path.join(model_args.tuned_projector, 'projector.pt'), weights_only=False)
-        model.model.mm_projector.load_state_dict(state)
-
     # decoder lora
     if training_args.lora_enable:
         from peft import LoraConfig, get_peft_model

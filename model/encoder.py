@@ -47,18 +47,15 @@ def unfreeze_stages(model, modules):
     if type(model) == MobileCLIPVisionTower:
         network = model.vision_tower.model.network
 
-    elif type(model) == MCi:
-        network = model.model.network
-
     elif type(model) == PeftModel:
         if type(model.base_model.model) == MobileCLIPVisionTower:
             network = model.base_model.model.vision_tower.model.network
 
-        elif type(model.base_model.model) == MCi:
+        else: # mci
             network = model.base_model.model.model.network
 
-    else:
-        raise NotImplementedError('Unsupported model type {}'.format(type(model)))
+    else: # mci
+        network = model.model.network
 
     for name, param in network[2].named_parameters():
         # if 'fc1' in name or 'fc2' in name:
