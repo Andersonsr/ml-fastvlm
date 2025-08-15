@@ -1338,12 +1338,6 @@ def train(attn_implementation=None):
             model.save_pretrained(training_args.output_dir, state_dict=state_dict)
             torch.save(non_lora_state_dict, os.path.join(training_args.output_dir, 'non_lora_trainables.bin'))
 
-    if training_args.projector_only:
-        if training_args.lora_enable:
-            torch.save(model.base_model.model.model.mm_projector.state_dict(), os.path.join(training_args.output_dir, 'projector.pt'))
-
-        else:
-            torch.save(model.model.mm_projector.state_dict(), os.path.join(training_args.output_dir, 'projector.pt'))
 
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,

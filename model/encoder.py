@@ -77,14 +77,14 @@ def unfreeze_stages(model, modules):
 
 
 if __name__ == '__main__':
-    model_path = '../checkpoints/llava-test'
+    model_path = '../checkpoints/test'
     model_name = get_model_name_from_path(model_path)
     tokenizer, model, image_processor, _ = load_pretrained_model(model_path, None, model_name, device="cuda:0", )
 
     # print(model.model.mm_projector)
 
     image = Image.open('loss_plot.png').convert('RGB')
-    image_tensor = process_images([image], image_processor, model.config)[0]
+    image_tensor = process_images([image], model.model.vision_tower.image_processor, model.config)[0]
     # model.model.vision_tower.cls_feature = True
 
     out = model.model.vision_tower(image_tensor.unsqueeze(0).to('cuda:0'))
