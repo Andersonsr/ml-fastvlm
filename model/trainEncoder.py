@@ -19,9 +19,17 @@ from llava.mm_utils import get_model_name_from_path, process_images
 from encoder import get_encoder, lora, unfreeze_stages
 
 
+def create_mapper(in_dim, out_dim, k):
+    modules = [nn.Linear(in_dim, out_dim),
+               nn.GELU(),
+               nn.Linear(out_dim, out_dim * k),
+               nn.Unflatten(-1, (k, out_dim))]
+    return nn.Sequential(*modules)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train encoder')
-    parser.add_argument('--encoder-path', type=str, required=True, help='path to encoder checkpoint')
+    parser.add_argument('--encoder_path', type=str, required=True, help='path to encoder checkpoint')
     parser.add_argument('--output_classes', type=int, default=3, choices=[3, 4], help='number of classes')
     parser.add_argument('--annotation', type=str, required=True, help='training dataset')
     parser.add_argument('--root-dir', type=str, required=True, help='path to dataset image dir')
@@ -38,11 +46,12 @@ if __name__ == '__main__':
     parser.add_argument('--lora_rank', type=int, default=16, help='rank for lora')
     parser.add_argument('--lora_alpha', type=int, default=32, help='alpha for lora')
     parser.add_argument('--lora_dropout', type=float, default=0.5, help='dropout for lora')
-    parser.add_argument('--dim', type=int, default=3072*256, help='dimension  encoder output')
-    parser.add_argument('--unfreeze', action='store_true', default=False, help='unfreeze')
-    parser.add_argument('--modules', type=str, default=None, choices=['fc', 'mixer'])
+    parser.add_argument('--dim', type=int, default=768, help='dimension  encoder output')
+    parser.add_argument('--unfreeze_modules', default=False, choices=['fc', 'mixer', 'both'], help='unfreeze')
     parser.add_argument('--bf16', action='store_true', default=False, help='use bf16 precision')
-    parser.add_argument('--average_loss', action='store_true', default=False, help='use average loss')
+    parser.add_argument('--train_mapper', action='store_true', default=False, help='train mapper during classification')
+    parser.add_argument('--mapper_in_dim', type=int, default=768)
+    parser.add_argument('--mapper_out_dim', type=int, default=896)
 
     args = parser.parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -71,7 +80,15 @@ if __name__ == '__main__':
         args.logging_interval = len(train_dataloader)
 
     os.makedirs(args.output_dir, exist_ok=True)
-    multi_classifier = MultiClassifier(mimic_classifier_list, args.dim, args.output_classes)
+
+    # create mapper
+    if args.train_mapper:
+        mapper = create_mapper(args.mapper_in_dim, args.mapper_out_dim, len(mimic_classifier_list))
+        mapper.to(device, dtype=dtype)
+
+    # create classifiers
+    class_dim = args.mapper_out_dim if args.train_mapper else args.dim
+    multi_classifier = MultiClassifier(mimic_classifier_list, class_dim, args.output_classes)
     multi_classifier.to(device, dtype=dtype)
 
     name = get_model_name_from_path(args.encoder_path)
@@ -81,14 +98,13 @@ if __name__ == '__main__':
     if args.lora:
         encoder = lora(encoder, args.lora_rank, args.lora_alpha, args.lora_dropout)
 
-    # só faz sentido se usado junto
-    if args.unfreeze and args.lora:
-        if args.modules == 'fc':
-            modules = ['fc1', 'fc2']
-        elif args.modules == 'mixer':
-            modules = ['token_mixer']
-        else:
-            raise ValueError('arg modules must be "fc" or "mixer"')
+    # only makes sense when both are true, because without lora the model is not frozen
+    if args.unfreeze_modules is not None and args.lora:
+        modules = []
+        if args.unfreeze_modules == 'fc' or args.unfreeze_modules == 'both':
+            modules += ['fc1', 'fc2']
+        if args.unfreeze_modules == 'mixer' or args.unfreeze_modules == 'both':
+            modules += ['token_mixer']
 
         unfreeze_stages(encoder, modules)
 
@@ -142,13 +158,15 @@ if __name__ == '__main__':
             optim.zero_grad()
             # images = preprocess()
             embeddings = encoder(batch['image'].to(device, dtype=dtype))
-            # print(embeddings.shape)
+
             if len(embeddings.shape) > 2:
                 b, c, d = embeddings.shape
                 embeddings = embeddings.reshape(b, c*d)
 
             logging.debug('image shape: {}'.format(batch['image'].shape))
             logging.debug('embedding shape: {}'.format(embeddings.shape))
+            if args.train_mapper:
+                embeddings = mapper(embeddings)
 
             classifier_logits = multi_classifier(embeddings)
             step_total_loss = []
@@ -167,9 +185,7 @@ if __name__ == '__main__':
                     step_classifiers_losses[name].append(0.)
 
             if len(step_total_loss) > 0:
-                epoch_loss = sum(step_total_loss)
-                if args.average_loss:
-                    epoch_loss /= len(classifiers_names)
+                epoch_loss = sum(step_total_loss)/len(classifiers_names)
 
                 # print('loss', epoch_loss.item())
                 epoch_loss.backward()
@@ -188,9 +204,13 @@ if __name__ == '__main__':
                 for batch in val_dataloader:
                     with torch.no_grad():
                         embeddings = encoder(batch['image'].to(device, dtype=dtype))
+                        # print(embeddings.shape)
                         if len(embeddings.shape) > 2:
                             b, c, d = embeddings.shape
                             embeddings = embeddings.reshape(b, c * d)
+
+                        if args.train_mapper:
+                            embeddings = mapper(embeddings)
 
                         classifier_logits = multi_classifier(embeddings)
                         step_total_loss = 0
@@ -202,9 +222,7 @@ if __name__ == '__main__':
                             if np.isnan(loss.to(dtype=torch.float32).cpu().detach().numpy()):
                                 # all labels are equal to ignore index
                                 loss = torch.tensor(0.0).to(device)
-                            step_total_loss += loss
-                            if args.average_loss:
-                                step_total_loss /= len(classifiers_names)
+                            step_total_loss += loss / len(classifiers_names)
 
                         step_validation_loss.append(step_total_loss.item())
 

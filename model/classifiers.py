@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 # removed 'No Finding'
 mimic_classifier_list = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Enlarged Cardiomediastinum',
@@ -22,12 +23,24 @@ class MultiClassifier(nn.Module):
 
     def forward(self, x):
         y = {}
-        for name, module in self.named_children():
-            # print(type(module))
-            y[name] = module(x)
-        return y
+        if len(x.shape) == 2:
+            for name, module in self.named_children():
+                # print(type(module))
+                y[name] = module(x)
+            return y
+
+        if len(x.shape) == 3:
+            # mapper output
+            for i, child in enumerate(self.named_children()):
+                name, module = child
+                # print(x[:, i, :].shape)
+                y[name] = module(x[:, i, :])
+            return y
 
 
-
-
+if __name__ == '__main__':
+    model = MultiClassifier(mimic_classifier_list, 896, 4)
+    input = torch.rand((16, 13, 896))
+    output = model(input)
+    print(output)
 
