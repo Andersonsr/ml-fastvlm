@@ -43,7 +43,6 @@ if __name__ == '__main__':
     parser.add_argument('--unfreeze_modules', default=False, choices=['fc', 'mixer', 'both'], help='unfreeze')
     parser.add_argument('--bf16', action='store_true', default=False, help='use bf16 precision')
     parser.add_argument('--train_mapper', action='store_true', default=False, help='train mapper during classification')
-    parser.add_argument('--mapper_in_dim', type=int, default=768)
     parser.add_argument('--mapper_out_dim', type=int, default=896)
 
     args = parser.parse_args()
@@ -76,7 +75,7 @@ if __name__ == '__main__':
 
     # create mapper
     if args.train_mapper:
-        mapper = create_mapper(args.mapper_in_dim, args.mapper_out_dim, len(mimic_classifier_list))
+        mapper = create_mapper(args.dim, args.mapper_out_dim, len(mimic_classifier_list))
         mapper.to(device, dtype=dtype)
 
     # create classifiers

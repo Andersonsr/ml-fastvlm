@@ -109,7 +109,7 @@ def train(epochs, batch_size, lr, filename, r, alpha, dropout, model_name, prefi
 
     if pretrained_mapper is not None:
         assert os.path.exists(pretrained_mapper), 'pretrained mapper not found at {}'.format(pretrained_mapper)
-        decoder.mapper = torch.load(pretrained_mapper)['state_dict']
+        decoder.mapper.load_state_dict(torch.load(pretrained_mapper)['model_state_dict'])
 
     if not full_finetune:
         # model was adapted before, load existing adapter to continue training

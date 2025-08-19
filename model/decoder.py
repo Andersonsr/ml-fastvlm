@@ -11,7 +11,7 @@ from peft import LoraConfig, get_peft_model
 path = os.path.normpath(os.path.join(os.path.join(os.path.abspath(__file__)), '..', '..'))
 sys.path.append(path)
 from util import learnable_parameters
-from mapper import create_mapper
+from model.mapper import create_mapper
 from model.classifiers import mimic_classifier_list
 
 logger = logging.getLogger('captioning')
