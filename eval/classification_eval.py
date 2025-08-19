@@ -12,6 +12,7 @@ from model.classifiers import MultiClassifier
 from tqdm import tqdm
 from model.classifiers import mimic_classifier_list
 from model.encoder import get_encoder, lora
+import random
 
 
 if __name__ == '__main__':
@@ -21,11 +22,15 @@ if __name__ == '__main__':
     parser.add_argument('--annotation_file', type=str, required=True, help='annotation file')
     parser.add_argument('--model_path', type=str, required=True, help='path to saved model weights')
     parser.add_argument('--model_base_path', type=str, required=True, help='path to base model')
+    parser.add_argument('--num_samples', type=int, default=None, help='number of samples to eval')
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "")
     config = json.load(open(os.path.join(args.model_path, 'experiment.json'), 'r'))
     data = MimicDataset(args.root_dir, args.annotation_file, zeroed=True if config['output_classes'] == 3 else False)
+    if args.num_samples is not None:
+        data.data = data.data[:args.num_samples]
+
     loader = data.get_loader(args.batch_size)
 
     classifier = MultiClassifier(mimic_classifier_list, config['dim'], config['output_classes']).to(device, dtype=torch.float)

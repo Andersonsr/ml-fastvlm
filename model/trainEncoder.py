@@ -261,6 +261,13 @@ if __name__ == '__main__':
 
                 torch.save(model_dict, os.path.join(args.output_dir, 'classifier_checkpoint.pt'))
 
+                if args.train_mapper:
+                    model_dict = {'epoch': epoch,
+                                  'model_state_dict': mapper.state_dict(),
+                                  'optimizer_state_dict': optim.state_dict(),
+                                  'loss': training_loss[-1]}
+                    torch.save(model_dict, os.path.join(args.output_dir, 'mapper_checkpoint.pt'))
+
     # finito
     result_dict = args.__dict__
     result_dict['checkpoint_path'] = os.path.join(args.output_dir, 'backbone_checkpoint.pt')

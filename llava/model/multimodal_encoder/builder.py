@@ -16,6 +16,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             return CLIPVisionTowerS2(vision_tower, args=vision_tower_cfg, **kwargs)
         else:
             return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
+
     elif "mobileclip" in vision_tower.lower():
         path = vision_tower_cfg.model_name_or_path if hasattr(vision_tower_cfg, 'model_name_or_path') else vision_tower_cfg._name_or_path
         if os.path.exists(os.path.join(path, 'model_args.json')):

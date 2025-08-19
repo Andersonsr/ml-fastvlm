@@ -74,7 +74,7 @@ def unfreeze_stages(model, modules):
 
 
 if __name__ == '__main__':
-    model_path = '../checkpoints/test'
+    model_path = '../checkpoints/stage3-c4ml-cap10/'
     model_name = get_model_name_from_path(model_path)
     tokenizer, model, image_processor, _ = load_pretrained_model(model_path, None, model_name, device="cuda:0", )
 

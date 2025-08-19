@@ -1228,7 +1228,7 @@ def train(attn_implementation=None):
                     if training_args.bf16 and module.weight.dtype == torch.float32:
                         module = module.to(torch.bfloat16)
 
-    # load finetuned encoder
+    # Stage 2
     if model_args.tuned_vision_tower:
         config = json.load(open(os.path.join(model_args.tuned_vision_tower, 'experiment.json'), 'r'))
         assert config['dim'] == 768, 'Dimension mismatch encoder output dim must be 768'
@@ -1248,6 +1248,15 @@ def train(attn_implementation=None):
             'model_state_dict']
         # print(state.keys())
         model.model.vision_tower.vision_tower.load_state_dict(state)
+
+    # stage 3, keep the same config
+    stage2_path = os.path.join(model_args.model_name_or_path, 'model_args.json')
+    if os.path.exists(stage2_path):
+        stage2_config = json.load(open(stage2_path, 'r'))
+        model_args.__dict__['encoder_lora_enable'] = stage2_config['lora']
+        model_args.__dict__['encoder_lora_r'] = stage2_config['lora_rank']
+        model_args.__dict__['encoder_lora_alpha'] = stage2_config['lora_alpha']
+        model_args.__dict__['encoder_lora_dropout'] = stage2_config['lora_dropout']
 
     # starting from pretrained fastVLM, might need to change model
     if model_args.cls_feature_mm_vision_tower != model.model.vision_tower.cls_feature:

@@ -155,8 +155,14 @@ def plot_f1():
     import matplotlib.pyplot as plt
     results = {'experiment': [], 'condition': [], 'f1-score': [], 'recall': [], 'precision': []}
 
-    for name in ['class-4-full', 'class-4-full-noavg', 'class-4-mixer-lora']:
-        data = json.load(open(f'checkpoints/{name}/classification_eval.json'))
+    for name in ['class-3-mixer-lora train', 'class-3-mixer-lora test']:
+        split = name.split()
+        if len(split) > 1:
+            data = json.load(open(f'checkpoints/{split[0]}/classification_eval_{split[1]}.json'))
+
+        else:
+            data = json.load(open(f'checkpoints/{name}/classification_eval.json'))
+
         for e in data:
             results['experiment'].append(name)
             results['condition'].append(e['condition'])
@@ -172,16 +178,6 @@ def plot_f1():
 
 
 if __name__ == '__main__':
-    from torch import nn
-    k = 10
-
-    modules = [nn.Linear(1024, 768),
-               nn.GELU(),
-               nn.Linear(768, 768 * k),
-               nn.Unflatten(-1, (k, 768))]
-
-    seq = nn.Sequential(*modules)
-    rand = torch.rand((16, 1024))
-    print(seq(rand).shape)
+    plot_f1()
 
 
