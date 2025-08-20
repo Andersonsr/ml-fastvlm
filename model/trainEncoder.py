@@ -138,6 +138,13 @@ if __name__ == '__main__':
         logs = None
         gc.collect()
 
+    # save experiment .json
+    result_dict = args.__dict__
+    result_dict['checkpoint_path'] = os.path.join(args.output_dir, 'backbone_checkpoint.pt')
+    result_dict['classifiers_checkpoint'] = os.path.join(args.output_dir, 'classifier_checkpoint.pt')
+    with open(os.path.join(args.output_dir, 'experiment.json'), 'w') as f:
+        json.dump(result_dict, f, indent=2)
+
     for epoch in range(current_epoch, args.epochs):
         step_training_loss = []
         # epoch loss per classifier
@@ -261,11 +268,5 @@ if __name__ == '__main__':
                     torch.save(model_dict, os.path.join(args.output_dir, 'mapper_checkpoint.pt'))
 
     # finito
-    result_dict = args.__dict__
-    result_dict['checkpoint_path'] = os.path.join(args.output_dir, 'backbone_checkpoint.pt')
-    result_dict['classifiers_checkpoint'] = os.path.join(args.output_dir, 'classifier_checkpoint.pt')
-
-    with open(os.path.join(args.output_dir, 'experiment.json'), 'w') as f:
-        json.dump(result_dict, f, indent=2)
 
 
