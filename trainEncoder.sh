@@ -2,7 +2,7 @@
 
 python ./model/trainEncoder.py \
     --encoder_path ./checkpoints/llava-fastvithd_0.5b_stage3/ \
-    --annotation E:/datasets/mimic/preprocess/train_split_filter.json \
+    --annotation E:/datasets/mimic/preprocess/micro_split.json \
     --root-dir E:/datasets/mimic/preprocess/resize_1024/ \
     --output_classes 4 \
     --batch_size 2 \

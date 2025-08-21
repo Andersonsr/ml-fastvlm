@@ -155,7 +155,7 @@ def plot_f1():
     import matplotlib.pyplot as plt
     results = {'experiment': [], 'condition': [], 'f1-score': [], 'recall': [], 'precision': []}
 
-    for name in ['class-3-mixer-lora train', 'class-3-mixer-lora test']:
+    for name in ['class-4-full train', 'class-4-full test']:
         split = name.split()
         if len(split) > 1:
             data = json.load(open(f'checkpoints/{split[0]}/classification_eval_{split[1]}.json'))
