@@ -6,12 +6,15 @@ python ./model/trainEncoder.py \
     --root-dir E:/datasets/mimic/preprocess/resize_1024/ \
     --output_classes 4 \
     --batch_size 2 \
-    --output_dir ./checkpoints/class-4-mixer-lora-mapper \
+    --output_dir ./checkpoints/teste \
     --dim 768 \
     --mapper_out_dim 512 \
     --epochs 1 \
     --logging_interval 2 \
-    --unfreeze_modules mixer \
     --train_mapper \
+    --neck 5120 \
     --lora \
+#    --unfreeze_modules mixer \
+#    --train_mapper \
+#    --lora \
 

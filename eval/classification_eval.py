@@ -12,6 +12,7 @@ from model.classifiers import MultiClassifier
 from tqdm import tqdm
 from model.classifiers import mimic_classifier_list
 from model.encoder import get_encoder, lora
+from model.mapper import create_mapper
 import random
 
 
@@ -33,10 +34,18 @@ if __name__ == '__main__':
 
     loader = data.get_loader(args.batch_size)
 
-    classifier = MultiClassifier(mimic_classifier_list, config['dim'], config['output_classes']).to(device, dtype=torch.float)
     encoder, preprocess = get_encoder(args.model_base_path, config['dim'])
     encoder.to(device, dtype=torch.float)
 
+    use_mapper = config['train_mapper'] if config['train_mapper'] is not None else False
+    neck = config['neck'] if 'neck' in config.keys() else None
+    if use_mapper:
+        mapper = create_mapper(config['dim'], config['mapper_out_dim'], len(mimic_classifier_list), neck)
+        mapper.to(device)
+
+    out_dim = config['mapper_out_dim'] if use_mapper else config['dim']
+    classifier = MultiClassifier(mimic_classifier_list, config['mapper_out_dim'], config['output_classes']).to(device,
+                                                                                                               dtype=torch.float)
     if config['lora']:
         print('Loading lora model')
         if config['dim'] == 768:
@@ -63,11 +72,14 @@ if __name__ == '__main__':
 
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
         with torch.no_grad():
-            image_features = encoder(batch['image'].to(device, dtype=torch.float))
+            embeddings = encoder(batch['image'].to(device, dtype=torch.float))
             # b, c, d = image_features.shape
             # image_features = image_features.reshape(b, c * d)
             # print(classifier)
-            classifier_logits = classifier(image_features)
+            if config['train_mapper']:
+                embeddings = mapper(embeddings)
+
+            classifier_logits = classifier(embeddings)
             labels = batch['labels']
             for name in mimic_classifier_list:
                 logits = classifier_logits[name]
@@ -88,7 +100,7 @@ if __name__ == '__main__':
 
     result_dict = []
     for name in mimic_classifier_list:
-        report = classification_report(gt[name], predictions[name], labels=range(len(target_names)), target_names=target_names, zero_division=0, output_dict=True)
+        report = classification_report(gt[name], predictions[name], labels=range(len(target_names)), target_names=target_names, zero_division=1, output_dict=True)
         result = {}
         # print(report)
         result['condition'] = name

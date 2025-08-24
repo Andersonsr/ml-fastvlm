@@ -44,6 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('--bf16', action='store_true', default=False, help='use bf16 precision')
     parser.add_argument('--train_mapper', action='store_true', default=False, help='train mapper during classification')
     parser.add_argument('--mapper_out_dim', type=int, default=896)
+    parser.add_argument('--neck', default=None, type=int)
 
     args = parser.parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -75,7 +76,8 @@ if __name__ == '__main__':
 
     # create mapper
     if args.train_mapper:
-        mapper = create_mapper(args.dim, args.mapper_out_dim, len(mimic_classifier_list))
+        print("NECK", args.neck)
+        mapper = create_mapper(args.dim, args.mapper_out_dim, len(mimic_classifier_list), args.neck)
         mapper.to(device, dtype=dtype)
 
     # create classifiers
